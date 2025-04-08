@@ -3,20 +3,24 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
-const { JWT_SECRET, GOOGLE_CLIENT_ID } = process.env;
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const { JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } = process.env;
+
+// Khởi tạo client với đầy đủ thông tin
+const client = new OAuth2Client(
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URI || 'https://manga-reader-app-backend.onrender.com/api/users/auth/google/callback'
+);
 
 // Các route cho OAuth Web application
 // Tạo URL xác thực Google
 router.get('/auth/google/url', (req, res) => {
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'https://manga-reader-app-backend.onrender.com/api/users/auth/google/callback';
   const authUrl = client.generateAuthUrl({
     access_type: 'offline',
     scope: [
       'https://www.googleapis.com/auth/userinfo.profile',
       'https://www.googleapis.com/auth/userinfo.email'
-    ],
-    redirect_uri: redirectUri
+    ]
   });
   
   res.json({ authUrl });
@@ -31,13 +35,8 @@ router.get('/auth/google/callback', async (req, res) => {
   }
   
   try {
-    // Lấy token từ code
-    const { tokens } = await client.getToken({
-      code,
-      redirect_uri: process.env.GOOGLE_REDIRECT_URI || 'https://manga-reader-app-backend.onrender.com/api/users/auth/google/callback'
-    });
+    const { tokens } = await client.getToken({ code });
     
-    // Xác thực token và lấy thông tin người dùng
     const ticket = await client.verifyIdToken({
       idToken: tokens.id_token,
       audience: GOOGLE_CLIENT_ID
@@ -67,13 +66,17 @@ router.get('/auth/google/callback', async (req, res) => {
     
     // Lưu token vào cơ sở dữ liệu
     await user.addToken(token);
-    
     // Chuyển hướng đến frontend với token
-    const frontendUrl = process.env.FRONTEND_URL || 'https://manga-reader-app-backend.onrender.com';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5074';
     res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
   } catch (error) {
     console.error('Lỗi xác thực Google:', error);
-    res.status(401).json({ message: 'Token không hợp lệ' });
+    if (error.response && error.response.data) {
+      console.error('Google API Error:', error.response.data);
+      res.status(400).json({ message: `Lỗi từ Google: ${error.response.data.error_description || error.response.data.error}` });
+    } else {
+      res.status(500).json({ message: 'Lỗi máy chủ khi xác thực Google' });
+    }
   }
 });
 
@@ -131,12 +134,23 @@ router.post('/auth/google', async (req, res) => {
 
 // Middleware xác thực JWT
 const authenticateToken = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  console.log('[AuthMiddleware] Received Token:', token);
+  console.log('[AuthMiddleware] JWT_SECRET Exists:', !!JWT_SECRET);
+
   if (!token) return res.status(401).json({ message: 'Token không tìm thấy' });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Token không hợp lệ' });
-    req.user = user; // Lưu thông tin user từ token
+    if (err) {
+      console.error('[AuthMiddleware] JWT Verification Error:', err.name, err.message);
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: 'Token đã hết hạn' });
+      }
+      return res.status(403).json({ message: 'Token không hợp lệ' });
+    }
+    req.user = user;
     next();
   });
 };
@@ -144,8 +158,8 @@ const authenticateToken = (req, res, next) => {
 // Thêm manga vào danh sách theo dõi
 router.post('/follow', authenticateToken, async (req, res) => {
   try {
-    const { mangaId } = req.body; // Sử dụng req.body thay vì req.query
-    const user = await User.findById(req.user.userId); // Lấy user từ token (req.user.id)
+    const { mangaId } = req.body;
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
@@ -170,8 +184,8 @@ router.post('/follow', authenticateToken, async (req, res) => {
 // Xóa manga khỏi danh sách theo dõi
 router.post('/unfollow', authenticateToken, async (req, res) => {
   try {
-    const { mangaId } = req.body; // Sử dụng req.body thay vì req.query
-    const user = await User.findById(req.user.userId);// Lấy user từ token (req.user.id)
+    const { mangaId } = req.body;
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
@@ -207,21 +221,18 @@ router.post('/reading-progress', authenticateToken, async (req, res) => {
     const readingIndex = user.readingManga.findIndex(m => m.mangaId === mangaId);
 
     if (readingIndex > -1) {
-      user.readingManga[readingIndex] = {
-        mangaId,
-        lastChapter: parseInt(lastChapter),
-        lastReadAt: new Date()
-      };
+      user.readingManga[readingIndex].lastChapter = lastChapter;
+      user.readingManga[readingIndex].lastReadAt = new Date();
     } else {
       user.readingManga.push({
         mangaId,
-        lastChapter: parseInt(lastChapter),
+        lastChapter: lastChapter,
         lastReadAt: new Date()
       });
     }
 
     await user.save();
-    res.json(user);
+    res.json({ readingManga: user.readingManga });
   } catch (error) {
     console.error('Update reading progress error:', error);
     res.status(500).json({ message: error.message });
@@ -231,8 +242,8 @@ router.post('/reading-progress', authenticateToken, async (req, res) => {
 // Route lấy thông tin người dùng từ token
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
-    
+    const user = await User.findById(req.user.userId).select('-tokens');
+
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
@@ -245,8 +256,20 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Route đăng xuất
-router.post('/logout', authenticateToken, (req, res) => {
-  res.json({ message: 'Đăng xuất thành công' });
+router.post('/logout', authenticateToken, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const user = await User.findById(req.user.userId);
+
+    if (user && token) {
+      await user.removeToken(token);
+    }
+    res.json({ message: 'Đăng xuất thành công' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ message: 'Lỗi khi đăng xuất' });
+  }
 });
 
 // API kiểm tra xem người dùng có theo dõi manga không
@@ -262,9 +285,7 @@ router.get('/user/following/:mangaId', authenticateToken, async (req, res) => {
 
     // Kiểm tra xem mangaId có trong danh sách manga đang theo dõi của người dùng không
     const isFollowing = user.followingManga.includes(mangaId);
-
-    // Trả về true hoặc false
-    res.json(isFollowing); // Trả về true nếu đang theo dõi, false nếu không theo dõi
+    res.json({ isFollowing });
   } catch (error) {
     console.error('Error checking following status:', error);
     res.status(500).json({ message: error.message });
