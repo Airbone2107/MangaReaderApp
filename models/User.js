@@ -43,7 +43,7 @@ const userSchema = new mongoose.Schema({
     createdAt: {
       type: Date,
       default: Date.now,
-      expires: '30d' // Tự động xóa token sau 7 ngày
+      expires: '30d' // Tự động xóa token sau 30 ngày
     }
   }],
   createdAt: {

@@ -6,19 +6,78 @@ const { OAuth2Client } = require('google-auth-library');
 const { JWT_SECRET, GOOGLE_CLIENT_ID } = process.env;
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Middleware xác thực JWT
-const authenticateToken = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'Token không tìm thấy' });
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Token không hợp lệ' });
-    req.user = user; // Lưu thông tin user từ token
-    next();
+// Các route cho OAuth Web application
+// Tạo URL xác thực Google
+router.get('/auth/google/url', (req, res) => {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'https://manga-reader-app-backend.onrender.com/api/users/auth/google/callback';
+  const authUrl = client.generateAuthUrl({
+    access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ],
+    redirect_uri: redirectUri
   });
-};
+  
+  res.json({ authUrl });
+});
 
-// Sửa route đăng nhập Google
+// Xử lý callback từ Google
+router.get('/auth/google/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.status(400).json({ message: 'Không có mã xác thực' });
+  }
+  
+  try {
+    // Lấy token từ code
+    const { tokens } = await client.getToken({
+      code,
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI || 'https://manga-reader-app-backend.onrender.com/api/users/auth/google/callback'
+    });
+    
+    // Xác thực token và lấy thông tin người dùng
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, sub: googleId, name, picture } = payload;
+    
+    // Tìm hoặc tạo user
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = new User({
+        googleId,
+        email,
+        displayName: name,
+        photoURL: picture,
+      });
+      await user.save();
+    }
+    
+    // Tạo JWT token
+    const token = jwt.sign(
+      { userId: user._id }, 
+      JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
+    );
+    
+    // Lưu token vào cơ sở dữ liệu
+    await user.addToken(token);
+    
+    // Chuyển hướng đến frontend với token
+    const frontendUrl = process.env.FRONTEND_URL || 'https://manga-reader-app-backend.onrender.com';
+    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+  } catch (error) {
+    console.error('Lỗi xác thực Google:', error);
+    res.status(401).json({ message: 'Token không hợp lệ' });
+  }
+});
+
+// Route đăng nhập Google cho Android
 router.post('/auth/google', async (req, res) => {
   const { accessToken } = req.body;
 
@@ -69,6 +128,18 @@ router.post('/auth/google', async (req, res) => {
     res.status(401).json({ message: 'Token không hợp lệ' });
   }
 });
+
+// Middleware xác thực JWT
+const authenticateToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'Token không tìm thấy' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Token không hợp lệ' });
+    req.user = user; // Lưu thông tin user từ token
+    next();
+  });
+};
 
 // Thêm manga vào danh sách theo dõi
 router.post('/follow', authenticateToken, async (req, res) => {
@@ -200,4 +271,4 @@ router.get('/user/following/:mangaId', authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
