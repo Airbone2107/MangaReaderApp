@@ -218,6 +218,20 @@ router.get('/manga-by-ids', async (req, res) => {
   }
 });
 
+// Lấy thông tin chi tiết của một chapter
+router.get('/chapter/:id', async (req, res) => {
+  try {
+    const response = await mangadexClient.get(`/chapter/${req.params.id}`);
+    res.json(response.data);
+  } catch (error) {
+    logMangadexError(`/chapter/${req.params.id}`, error, { params: req.params });
+    res.status(error.response?.status || 500).json({
+      error: 'Lỗi khi tải thông tin chapter',
+      details: error.response?.data || error.message
+    });
+  }
+});
+
 // Proxy cho hình ảnh
 router.get('/proxy-image', async (req, res) => {
   const imageUrl = req.query.url;
