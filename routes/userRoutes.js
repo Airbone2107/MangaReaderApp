@@ -292,4 +292,33 @@ router.get('/user/following/:mangaId', authenticateToken, async (req, res) => {
   }
 });
 
+// Route lấy lịch sử đọc của người dùng
+router.get('/reading-history', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('readingManga'); // Chỉ lấy trường readingManga
+
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    // Sắp xếp lịch sử theo thời gian đọc gần nhất (giảm dần)
+    const sortedHistory = user.readingManga.sort((a, b) => b.lastReadAt - a.lastReadAt);
+
+    // Trả về danh sách lịch sử đọc (chỉ gồm mangaId, chapterId, lastReadAt)
+    // Backend trả về đúng cấu trúc mà ReadingHistoryService.cs mong đợi
+    const historyResponse = sortedHistory.map(item => ({
+        mangaId: item.mangaId,
+        chapterId: item.lastChapter, // Đảm bảo tên trường khớp
+        lastReadAt: item.lastReadAt
+    }));
+
+
+    res.json(historyResponse); // Trả về mảng lịch sử đã sắp xếp
+
+  } catch (error) {
+    console.error('Lỗi lấy lịch sử đọc:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ khi lấy lịch sử đọc' });
+  }
+});
+
 module.exports = router;
