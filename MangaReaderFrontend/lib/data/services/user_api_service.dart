@@ -1,4 +1,3 @@
-// lib/data/services/user_api_service.dart
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -22,17 +21,19 @@ class UserApiService {
       final googleAuth = await googleUser.authentication;
       print('Authenticating with Google...');
 
-      final accessToken = googleAuth.accessToken;
-      if (accessToken == null) {
-        throw Exception('Không lấy được Access Token từ Google');
+      // Thay đổi từ accessToken sang idToken
+      final idToken = googleAuth.idToken;
+      if (idToken == null) {
+        throw Exception('Không lấy được ID Token từ Google');
       }
 
-      print('Access Token available: $accessToken');
+      print('ID Token available.');
 
       final response = await client.post(
         Uri.parse('$baseUrl/api/users/auth/google'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'accessToken': accessToken}),
+        // Gửi idToken thay vì accessToken
+        body: jsonEncode({'idToken': idToken}),
       );
 
       print('Response status: ${response.statusCode}');
@@ -66,9 +67,13 @@ class UserApiService {
       if (response.statusCode == 200) {
         await SecureStorageService.removeToken();
       } else {
-        throw HttpException('Đăng xuất thất bại');
+        // Ngay cả khi backend lỗi, vẫn xóa token ở client để người dùng có thể đăng nhập lại
+        await SecureStorageService.removeToken();
+        throw HttpException('Đăng xuất thất bại phía server, đã xóa token cục bộ.');
       }
     } catch (e) {
+      // Đảm bảo token được xóa dù có lỗi
+      await SecureStorageService.removeToken();
       throw Exception('Lỗi khi đăng xuất: $e');
     }
   }
@@ -81,11 +86,13 @@ class UserApiService {
       Uri.parse('$baseUrl/api/users'),
       headers: _buildHeaders(token),
     );
-    print("getUserData đã xử lý xong");
+    print("getUserData đã xử lý xong. Status: ${response.statusCode}");
     if (response.statusCode == 200) {
       final userData = jsonDecode(response.body);
       return User.fromJson(userData);
-    } else if (response.statusCode == 403) {
+    } else if (response.statusCode == 403 || response.statusCode == 401) {
+      // Nếu token không hợp lệ, xóa nó và báo lỗi
+      await SecureStorageService.removeToken();
       throw HttpException('403');
     } else {
       throw HttpException(
@@ -138,14 +145,12 @@ class UserApiService {
       }
       final response = await http.get(
         Uri.parse('$baseUrl/api/users/user/following/$mangaId'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: _buildHeaders(token),
       );
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) == true;
+        return jsonDecode(response.body)['isFollowing'] ?? false;
       } else {
-        print('Error response status: ${response.statusCode}');
-        print('Error response body: ${response.body}');
-        throw Exception('Lỗi khi kiểm tra theo dõi: ${response.body}');
+        return false;
       }
     } catch (e) {
       print("Error checking follow status: $e");

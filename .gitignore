@@ -1,0 +1,66 @@
+# .gitignore
+# File .gitignore chung cho cả Backend (Node.js) và Frontend (Flutter)
+
+# === Backend - Node.js ===
+# Dependencies
+MangaReaderBackend/node_modules/
+
+# Production
+MangaReaderBackend/build/
+MangaReaderBackend/dist/
+
+# Logs
+MangaReaderBackend/logs/
+*.log
+
+# Environment variables
+MangaReaderBackend/.env
+.env.*.local
+
+# IDEs and editors
+.idea/
+.vscode/
+
+# === Frontend - Flutter ===
+# Miscellaneous
+*.class
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/MangaReaderFrontend/android/app/debug
+/MangaReaderFrontend/android/app/profile
+/MangaReaderFrontend/android/app/release
+
+# Android Keystore file
+/MangaReaderFrontend/android/app/*.keystore
+/MangaReaderFrontend/android/app/*.jks
+/MangaReaderFrontend/android/app/*.p12
+/MangaReaderFrontend/android/key.properties

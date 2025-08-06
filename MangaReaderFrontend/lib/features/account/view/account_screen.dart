@@ -65,18 +65,18 @@ class _AccountScreenState extends State<AccountScreen> {
           accountName: Text(_logic.user!.displayName),
           accountEmail: Text(_logic.user!.email),
           currentAccountPicture: _logic.user!.photoURL != null &&
-                  _logic.user!.photoURL!.isNotEmpty
+              _logic.user!.photoURL!.isNotEmpty
               ? CircleAvatar(
-                  backgroundImage: NetworkImage(_logic.user!.photoURL!))
+              backgroundImage: NetworkImage(_logic.user!.photoURL!))
               : CircleAvatar(
-                  backgroundColor: Colors.blue,
-                  child: Text(
-                    _logic.user!.displayName.isNotEmpty
-                        ? _logic.user!.displayName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(color: Colors.white, fontSize: 24),
-                  ),
-                ),
+            backgroundColor: Colors.blue,
+            child: Text(
+              _logic.user!.displayName.isNotEmpty
+                  ? _logic.user!.displayName[0].toUpperCase()
+                  : '?',
+              style: const TextStyle(color: Colors.white, fontSize: 24),
+            ),
+          ),
         ),
         Expanded(
           child: ListView(

@@ -3,7 +3,6 @@ const cors = require('cors');
 require('dotenv').config();
 const mongoose = require('mongoose');
 const userRoutes = require('./routes/userRoutes');
-const mangadexRoutes = require('./routes/mangadexRoutes');
 const fs = require('fs');
 const path = require('path');
 
@@ -44,7 +43,6 @@ mongoose.connect(process.env.DB_URI, { dbName: 'NhatDex_UserDB' })
 
 // Routes
 app.use('/api/users', userRoutes);
-app.use('/api/mangadex', mangadexRoutes);
 
 // Routes chính
 app.get('/', (req, res) => res.send('Manga Reader Backend đang chạy!'));
@@ -56,18 +54,6 @@ app.get('/status', (req, res) => res.json({
   serverTime: new Date().toISOString(),
   environment: process.env.NODE_ENV || 'development'
 }));
-app.get('/api/test-mangadex', (req, res) => {
-  res.json({
-    message: 'Route test MangaDex hoạt động',
-    routes: [
-      '/api/mangadex/manga',
-      '/api/mangadex/manga/:id',
-      '/api/mangadex/manga/:id/feed',
-      '/api/mangadex/manga/tag',
-      '/api/mangadex/cover'
-    ]
-  });
-});
 
 // Middleware xử lý lỗi
 app.use((err, req, res, next) => {

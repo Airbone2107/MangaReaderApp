@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="E:\Project\MangaReaderApp\MangaReaderFrontend\build\windows\x64\CMakeFiles\04642ea5e7565dcad0577f69664dedcb\flutter_windows.dll.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\Project\MangaReaderApp\MangaReaderFrontend\build\windows\x64\CMakeFiles\690a42cbe259078709f651474179802d\flutter_assemble.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="E:\Project\MangaReaderApp\MangaReaderFrontend\windows\flutter\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="E:\Project\MangaReaderApp\MangaReaderFrontend\build\windows\x64\flutter\CMakeFiles\flutter_assemble" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{51A0D852-5D5A-3386-8EAE-54D320328D7A}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
