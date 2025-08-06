@@ -1,6 +1,4 @@
-// lib/features/chapter_reader/logic/chapter_reader_logic.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../../data/models/chapter_model.dart';
 import '../../../data/services/mangadex_api_service.dart';
 import '../../../data/services/user_api_service.dart';

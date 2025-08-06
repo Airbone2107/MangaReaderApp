@@ -1,66 +1,112 @@
-# .gitignore
-# File .gitignore chung cho cả Backend (Node.js) và Frontend (Flutter)
+// .gitignore
+# Tệp .gitignore được cập nhật cho cả Backend (Node.js) và Frontend (Flutter)
 
-# === Backend - Node.js ===
-# Dependencies
-MangaReaderBackend/node_modules/
+# === CÀI ĐẶT CHUNG & IDE ===
+# Tệp do hệ điều hành tạo
+.DS_Store
+*.swp
+*~
+Thumbs.db
 
-# Production
-MangaReaderBackend/build/
-MangaReaderBackend/dist/
-
-# Logs
-MangaReaderBackend/logs/
-*.log
-
-# Environment variables
-MangaReaderBackend/.env
-.env.*.local
-
-# IDEs and editors
+# Cài đặt IDE và trình soạn thảo
 .idea/
 .vscode/
-
-# === Frontend - Flutter ===
-# Miscellaneous
-*.class
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.buildlog/
-.history
-.svn/
-migrate_working_dir/
-
-# IntelliJ related
 *.iml
 *.ipr
 *.iws
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Tệp do Flutter tạo
+.metadata
+.packages
+
+# === BACKEND - NODE.JS (trong MangaReaderBackend/) ===
+# Các gói phụ thuộc
+MangaReaderBackend/node_modules/
+
+# Các tệp build
+MangaReaderBackend/build/
+MangaReaderBackend/dist/
+
+# Tệp log
+MangaReaderBackend/logs/
+npm-debug.log*
+yarn-error.log*
+*.log
+
+# Các biến môi trường
+MangaReaderBackend/.env
+MangaReaderBackend/.env.*
+.env
+.env.*.local
+!.env.example
+
+# Thư mục cache và các tệp tạm thời
+.npm/
+.pnp.*
+
+# Báo cáo test coverage
+MangaReaderBackend/coverage/
+.nyc_output/
+
+
+# === FRONTEND - FLUTTER (trong MangaReaderFrontend/) ===
+# Dart & Pub
 .dart_tool/
+.pub/
+.pub-cache/
+
+# Tệp build của Flutter
+MangaReaderBackend/build/
+MangaReaderFrontend/build/
+
+# Các tệp plugin do Flutter tạo
 .flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/MangaReaderFrontend/android/app/debug
-/MangaReaderFrontend/android/app/profile
-/MangaReaderFrontend/android/app/release
-
-# Android Keystore file
+# Tệp cấu hình Android Studio
+/MangaReaderFrontend/android/local.properties
+/MangaReaderFrontend/android/key.properties
 /MangaReaderFrontend/android/app/*.keystore
 /MangaReaderFrontend/android/app/*.jks
 /MangaReaderFrontend/android/app/*.p12
-/MangaReaderFrontend/android/key.properties
+
+# Thư mục cache của Gradle
+/MangaReaderFrontend/android/.gradle/
+
+# Các tệp build của Android
+/MangaReaderFrontend/android/app/debug/
+/MangaReaderFrontend/android/app/profile/
+/MangaReaderFrontend/android/app/release/
+
+# Tệp build và cấu hình của iOS
+/MangaReaderFrontend/ios/Pods/
+/MangaReaderFrontend/ios/Flutter/App.framework
+/MangaReaderFrontend/ios/Flutter/Flutter.framework
+/MangaReaderFrontend/ios/Flutter/Generated.xcconfig
+/MangaReaderFrontend/ios/Flutter/.last_build_id
+/MangaReaderFrontend/ios/Runner/GeneratedPluginRegistrant.*
+/MangaReaderFrontend/ios/.symlinks/
+/MangaReaderFrontend/ios/Runner.xcworkspace/xcshareddata/
+/MangaReaderFrontend/ios/Runner.xcodeproj/xcshareddata/
+/MangaReaderFrontend/ios/Runner.xcodeproj/project.xcworkspace/
+/MangaReaderFrontend/ios/Runner/Assets.xcassets/AppIcon.appiconset/
+
+# Tệp build của Linux
+/MangaReaderFrontend/linux/flutter/ephemeral/
+
+# Tệp build của macOS
+/MangaReaderFrontend/macos/Flutter/ephemeral/
+/MangaReaderFrontend/macos/Pods/
+/MangaReaderFrontend/macos/Runner.xcworkspace/xcshareddata/
+/MangaReaderFrontend/macos/Runner.xcodeproj/xcshareddata/
+/MangaReaderFrontend/macos/Runner.xcodeproj/project.xcworkspace/
+
+# Tệp build của Windows
+/MangaReaderFrontend/windows/flutter/ephemeral/
+/MangaReaderFrontend/windows/runner/Debug/
+/MangaReaderFrontend/windows/runner/Profile/
+/MangaReaderFrontend/windows/runner/Release/
+
+# Các tệp liên quan đến symbolication và obfuscation
+app.*.symbols
+app.*.map.json

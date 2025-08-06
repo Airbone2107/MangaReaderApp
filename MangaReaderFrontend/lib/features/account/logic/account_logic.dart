@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../../config/google_signin_config.dart'; // Thêm import này
 import '../../../data/models/chapter_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/services/mangadex_api_service.dart';
@@ -11,9 +12,13 @@ import '../../detail_manga/view/manga_detail_screen.dart';
 
 class AccountScreenLogic {
   final MangaDexApiService _mangaDexService = MangaDexApiService();
-  // Khởi tạo GoogleSignIn.instance
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  final UserApiService _userService = UserApiService();
+  // Cập nhật khởi tạo GoogleSignIn để bao gồm serverClientId
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+    serverClientId: GoogleSignInConfig.serverClientId,
+  );
+  final UserApiService _userService =
+  UserApiService(); // Không cần truyền baseUrl
   final Map<String, dynamic> _mangaCache = {};
 
   User? user;
@@ -24,7 +29,6 @@ class AccountScreenLogic {
   Future<void> init(BuildContext context, VoidCallback refreshUI) async {
     this.context = context;
     this.refreshUI = refreshUI;
-    // Không cần initialize() ở đây vì nó sẽ được gọi trong handleSignIn nếu cần
     await _loadUser();
   }
 
@@ -40,9 +44,8 @@ class AccountScreenLogic {
       }
     } catch (e) {
       user = null;
-      // Nếu token hết hạn hoặc không hợp lệ (lỗi 403/401), tự động đăng xuất
-      if (e is HttpException && (e.message == '403' || e.message == '401')) {
-        await handleSignOut();
+      if (e is HttpException && e.message == '403') {
+        await handleSignOut(); // Token is invalid, force sign out
       }
       print("Lỗi khi tải người dùng: $e");
     } finally {
@@ -55,19 +58,12 @@ class AccountScreenLogic {
     isLoading = true;
     refreshUI();
     try {
-      // BƯỚC 2 & 3 TỪ MIGRATION.MD: Thay thế signIn() bằng authenticate()
-      // GoogleSignIn.instance.initialize() sẽ được gọi ngầm bởi authenticate nếu cần.
-      final account = await _googleSignIn.authenticate(
-        // BƯỚC 6: Chỉ định scope tại đây
-        scopeHint: ['email', 'profile'],
-      );
-
+      final account = await _googleSignIn.signIn();
+      if (account == null) {
+        throw Exception('Đăng nhập bị hủy');
+      }
       await _userService.signInWithGoogle(account);
       user = await _fetchUserData();
-    } on GoogleSignInException catch (e) {
-      print('Google Sign In error: code: ${e.code?.name} description:${e.description} details:${e.details}');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi đăng nhập Google: ${e.description}')));
-      user = null;
     } catch (error) {
       print('Lỗi đăng nhập: $error');
       ScaffoldMessenger.of(context)
@@ -81,16 +77,13 @@ class AccountScreenLogic {
 
   Future<void> handleSignOut() async {
     try {
-      // Đăng xuất khỏi Google và backend
       await _googleSignIn.signOut();
-      await _userService.logout();
-    } catch (error) {
-      // Dù có lỗi, vẫn đảm bảo người dùng được đăng xuất ở client
-      print('Lỗi đăng xuất: $error');
       await SecureStorageService.removeToken();
-    } finally {
       user = null;
       refreshUI();
+    } catch (error) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Lỗi đăng xuất: $error')));
     }
   }
 
@@ -141,7 +134,7 @@ class AccountScreenLogic {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _getMangaListInfo(mangaIds),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && mangaIds.isNotEmpty) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return Card(
               child: ListTile(
                   title: Text(title),
@@ -153,17 +146,8 @@ class AccountScreenLogic {
                   title: Text(title),
                   subtitle: Text('Lỗi: ${snapshot.error}')));
         }
-        if (mangaIds.isEmpty) {
-          return Card(
-              margin: EdgeInsets.all(8),
-              child: ListTile(
-                  title: Text(title),
-                  subtitle: Text('Danh sách trống.')));
-        }
-
         final mangas = snapshot.data ?? [];
         for (var manga in mangas) _mangaCache[manga['id']] = manga;
-
         return Card(
           margin: EdgeInsets.all(8),
           child: Column(
@@ -172,8 +156,8 @@ class AccountScreenLogic {
               Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(title,
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold))),
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
               ListView.builder(
                 shrinkWrap: true,
                 physics: NeverScrollableScrollPhysics(),
@@ -218,7 +202,7 @@ class AccountScreenLogic {
         borderRadius: BorderRadius.circular(8.0),
         boxShadow: [
           BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withAlpha(51),
               blurRadius: 6.0,
               offset: Offset(0, 2))
         ],
@@ -266,7 +250,7 @@ class AccountScreenLogic {
                       return SizedBox(
                           height: 50,
                           child: Center(child: CircularProgressIndicator()));
-                    if (snapshot.hasError || snapshot.data!.isEmpty) return Text('Không có chapter.');
+                    if (snapshot.hasError) return Text('Không thể tải chapter');
                     var chapter = snapshot.data!.first;
                     String chapterNumber =
                         chapter['attributes']['chapter'] ?? 'N/A';
