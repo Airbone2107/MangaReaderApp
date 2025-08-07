@@ -27,26 +27,38 @@ class SortManga {
     status ??= 'Tất cả';
     safety ??= 'Tất cả';
     demographic ??= 'Tất cả';
-    includedTags ??= [];
-    excludedTags ??= [];
-    languages ??= [];
+    includedTags ??= <String>[];
+    excludedTags ??= <String>[];
+    languages ??= <String>[];
     sortBy ??= 'Mới cập nhật';
   }
 
   // Hàm chuyển đổi thành params
   Map<String, dynamic> toParams() {
     handleNullValues();
-    final params = <String, dynamic>{};
+    final Map<String, dynamic> params = <String, dynamic>{};
 
-    if (title!.isNotEmpty) params['title'] = title;
-    if (status != 'Tất cả') params['status[]'] = [status!.toLowerCase()];
-    if (safety != 'Tất cả') params['contentRating[]'] = [safety!.toLowerCase()];
-    if (demographic != 'Tất cả')
-      params['publicationDemographic[]'] = [demographic!.toLowerCase()];
-    if (includedTags!.isNotEmpty) params['includedTags[]'] = includedTags;
-    if (excludedTags!.isNotEmpty) params['excludedTags[]'] = excludedTags;
-    if (languages!.isNotEmpty)
+    if (title!.isNotEmpty) {
+      params['title'] = title;
+    }
+    if (status != 'Tất cả') {
+      params['status[]'] = <String>[status!.toLowerCase()];
+    }
+    if (safety != 'Tất cả') {
+      params['contentRating[]'] = <String>[safety!.toLowerCase()];
+    }
+    if (demographic != 'Tất cả') {
+      params['publicationDemographic[]'] = <String>[demographic!.toLowerCase()];
+    }
+    if (includedTags!.isNotEmpty) {
+      params['includedTags[]'] = includedTags;
+    }
+    if (excludedTags!.isNotEmpty) {
+      params['excludedTags[]'] = excludedTags;
+    }
+    if (languages!.isNotEmpty) {
       params['availableTranslatedLanguage[]'] = languages;
+    }
     params['order[updatedAt]'] = sortBy == 'Mới cập nhật' ? 'desc' : 'asc';
 
     return params;

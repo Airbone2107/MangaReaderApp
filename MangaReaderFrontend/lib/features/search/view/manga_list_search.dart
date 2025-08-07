@@ -7,9 +7,9 @@ class MangaListSearch extends StatefulWidget {
   final SortManga sortManga;
 
   const MangaListSearch({
-    Key? key,
+    super.key,
     required this.sortManga,
-  }) : super(key: key);
+  });
 
   @override
   State<MangaListSearch> createState() => _MangaListSearchState();
@@ -22,7 +22,7 @@ class _MangaListSearchState extends State<MangaListSearch> {
   Widget build(BuildContext context) {
     return ScaffoldWithAnimatedAppBar(
       title: 'Kết Quả Tìm Kiếm',
-      actions: [
+      actions: <Widget>[
         IconButton(
           icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
           onPressed: () {
@@ -32,7 +32,7 @@ class _MangaListSearchState extends State<MangaListSearch> {
           },
         ),
       ],
-      bodyBuilder: (controller) => MangaGridView(
+      bodyBuilder: (ScrollController controller) => MangaGridView(
         sortManga: widget.sortManga,
         controller: controller,
         isGridView: _isGridView,

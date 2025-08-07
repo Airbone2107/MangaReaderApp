@@ -7,10 +7,10 @@ import '../logic/chapter_reader_logic.dart';
 
 class ChapterReaderScreen extends StatefulWidget {
   final Chapter chapter;
-  ChapterReaderScreen({required this.chapter});
+  const ChapterReaderScreen({super.key, required this.chapter});
 
   @override
-  _ChapterReaderScreenState createState() => _ChapterReaderScreenState();
+  State<ChapterReaderScreen> createState() => _ChapterReaderScreenState();
 }
 
 class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
@@ -23,9 +23,11 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
   void initState() {
     super.initState();
     _logic = ChapterReaderLogic(
-      userService: UserApiService(), // Sử dụng constructor mặc định
-      setState: (fn) {
-        if (mounted) setState(fn);
+      userService: UserApiService(),
+      setState: (VoidCallback fn) {
+        if (mounted) {
+          setState(fn);
+        }
       },
       scrollController: _scrollController,
     );
@@ -36,7 +38,7 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
   }
 
   Future<void> _checkFollowingStatus() async {
-    final followingStatus =
+    final bool followingStatus =
         await _logic.isFollowingManga(widget.chapter.mangaId);
     if (mounted) {
       setState(() {
@@ -59,30 +61,33 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
         onTap: () =>
             setState(() => _logic.areBarsVisible = !_logic.areBarsVisible),
         child: Stack(
-          children: [
+          children: <Widget>[
             FutureBuilder<List<String>>(
               future: _chapterPages,
-              builder: (context, snapshot) {
+              builder:
+                  (BuildContext context, AsyncSnapshot<List<String>> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
                   return Center(child: Text('Lỗi:  ${snapshot.error}'));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text('Không có trang nào.'));
+                  return const Center(child: Text('Không có trang nào.'));
                 }
                 return ListView.builder(
                   controller: _scrollController,
                   itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    // Sử dụng CachedNetworkImage trực tiếp
+                  itemBuilder: (BuildContext context, int index) {
                     return CachedNetworkImage(
                       imageUrl: snapshot.data![index],
                       fit: BoxFit.fitWidth,
-                      placeholder: (context, url) => Container(
+                      placeholder: (BuildContext context, String url) =>
+                          const SizedBox(
                         height: 300,
                         child: Center(child: CircularProgressIndicator()),
                       ),
-                      errorWidget: (context, url, error) => Container(
+                      errorWidget:
+                          (BuildContext context, String url, Object error) =>
+                              const SizedBox(
                         height: 300,
                         child: Center(child: Icon(Icons.error)),
                       ),
@@ -99,10 +104,10 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
   }
 
   Widget _buildOverlay(BuildContext context) {
-    int currentIndex = _logic.getCurrentIndex(widget.chapter);
+    final int currentIndex = _logic.getCurrentIndex(widget.chapter);
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
+      children: <Widget>[
         _buildAppBar(context),
         _buildBottomNavBar(context, currentIndex),
       ],
@@ -114,22 +119,22 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
       color: Colors.black54,
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
       child: Row(
-        children: [
+        children: <Widget>[
           IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
           Expanded(
             child: Center(
               child: Text(
                 widget.chapter.chapterName,
-                style: TextStyle(color: Colors.white, fontSize: 18),
+                style: const TextStyle(color: Colors.white, fontSize: 18),
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
-          SizedBox(width: 48), // To balance the back button
+          const SizedBox(width: 48), // To balance the back button
         ],
       ),
     );
@@ -141,20 +146,20 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
+        children: <Widget>[
           IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => _logic.goToPreviousChapter(
                 context, widget.chapter, currentIndex),
           ),
           IconButton(
-            icon: Icon(Icons.settings, color: Colors.white),
+            icon: const Icon(Icons.settings, color: Colors.white),
             onPressed: () {},
           ),
           IconButton(
-            icon: Icon(Icons.home, color: Colors.white),
+            icon: const Icon(Icons.home, color: Colors.white),
             onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                context, '/', (route) => false),
+                context, '/', (Route<dynamic> route) => false),
           ),
           IconButton(
             icon: Icon(
@@ -172,7 +177,7 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.arrow_forward, color: Colors.white),
+            icon: const Icon(Icons.arrow_forward, color: Colors.white),
             onPressed: () =>
                 _logic.goToNextChapter(context, widget.chapter, currentIndex),
           ),

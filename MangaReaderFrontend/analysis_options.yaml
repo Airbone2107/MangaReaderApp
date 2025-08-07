@@ -4,17 +4,19 @@ linter:
   rules:
     # ===== BẬT CÁC QUY TẮC HỮU ÍCH =====
     # Style - Giúp code nhất quán
-    prefer_single_quotes: true
-    prefer_relative_imports: true
     always_specify_types: true
     prefer_final_locals: true
-    
+    prefer_single_quotes: true
+    curly_braces_in_flow_control_structures: true
+    sort_child_properties_last: true
+    prefer_relative_imports: true
+
     # Performance & Best Practices
     avoid_print: true # Rất quan trọng để tập thói quen không dùng print
     avoid_unnecessary_containers: true
     prefer_const_constructors: true
     prefer_const_declarations: true
-    
+
     # Thêm các quy tắc khác bạn thấy cần thiết từ: https://dart.dev/lints
 
 analyzer:

@@ -27,9 +27,11 @@ class User {
       email: json['email'] as String? ?? '',
       displayName: json['displayName'] as String? ?? '',
       photoURL: json['photoURL'] as String?,
-      following: List<String>.from(json['followingManga'] as List? ?? []),
-      readingProgress: (json['readingManga'] as List? ?? [])
-          .map((x) => ReadingProgress.fromJson(x as Map<String, dynamic>))
+      following: List<String>.from(
+          (json['followingManga'] as List<dynamic>?) ?? <String>[]),
+      readingProgress: ((json['readingManga'] as List<dynamic>?) ?? <dynamic>[])
+          .map((dynamic x) =>
+              ReadingProgress.fromJson(x as Map<String, dynamic>))
           .toList(),
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),

@@ -1,12 +1,13 @@
 // lib/features/account/view/account_screen.dart
 import 'package:flutter/material.dart';
+import '../../../data/models/user_model.dart';
 import '../logic/account_logic.dart';
 
 class AccountScreen extends StatefulWidget {
-  const AccountScreen({Key? key}) : super(key: key);
+  const AccountScreen({super.key});
 
   @override
-  _AccountScreenState createState() => _AccountScreenState();
+  State<AccountScreen> createState() => _AccountScreenState();
 }
 
 class _AccountScreenState extends State<AccountScreen> {
@@ -17,7 +18,9 @@ class _AccountScreenState extends State<AccountScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _logic.init(context, () {
-        if (mounted) setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
     });
   }
@@ -47,7 +50,7 @@ class _AccountScreenState extends State<AccountScreen> {
       return Center(
         child: ElevatedButton(
           onPressed: _logic.handleSignIn,
-          child: const Text("Đăng nhập bằng Google"),
+          child: const Text('Đăng nhập bằng Google'),
         ),
       );
     }
@@ -60,28 +63,28 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Widget _buildUserContent() {
     return Column(
-      children: [
+      children: <Widget>[
         UserAccountsDrawerHeader(
           accountName: Text(_logic.user!.displayName),
           accountEmail: Text(_logic.user!.email),
           currentAccountPicture: _logic.user!.photoURL != null &&
-              _logic.user!.photoURL!.isNotEmpty
+                  _logic.user!.photoURL!.isNotEmpty
               ? CircleAvatar(
-              backgroundImage: NetworkImage(_logic.user!.photoURL!))
+                  backgroundImage: NetworkImage(_logic.user!.photoURL!))
               : CircleAvatar(
-            backgroundColor: Colors.blue,
-            child: Text(
-              _logic.user!.displayName.isNotEmpty
-                  ? _logic.user!.displayName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(color: Colors.white, fontSize: 24),
-            ),
-          ),
+                  backgroundColor: Colors.blue,
+                  child: Text(
+                    _logic.user!.displayName.isNotEmpty
+                        ? _logic.user!.displayName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(color: Colors.white, fontSize: 24),
+                  ),
+                ),
         ),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.all(8.0),
-            children: [
+            children: <Widget>[
               _logic.buildMangaListView(
                 'Truyện Theo Dõi',
                 _logic.user!.following,
@@ -90,14 +93,16 @@ class _AccountScreenState extends State<AccountScreen> {
               const SizedBox(height: 16),
               _logic.buildMangaListView(
                 'Lịch Sử Đọc Truyện',
-                _logic.user!.readingProgress.map((p) => p.mangaId).toList(),
+                _logic.user!.readingProgress
+                    .map((ReadingProgress p) => p.mangaId)
+                    .toList(),
               ),
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ElevatedButton(
-                  onPressed: _logic.handleSignOut,
-                  child: const Text("Đăng xuất"),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: _logic.handleSignOut,
+                  child: const Text('Đăng xuất'),
                 ),
               ),
             ],

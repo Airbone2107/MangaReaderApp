@@ -1,10 +1,12 @@
-// lib/features/search/view/manga_search_screen.dart
 import 'package:flutter/material.dart';
+import '../../../data/models/manga/tag.dart';
 import '../logic/search_logic.dart';
 
 class AdvancedSearchScreen extends StatefulWidget {
+  const AdvancedSearchScreen({super.key});
+
   @override
-  _AdvancedSearchScreenState createState() => _AdvancedSearchScreenState();
+  State<AdvancedSearchScreen> createState() => _AdvancedSearchScreenState();
 }
 
 class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
@@ -14,7 +16,9 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   void initState() {
     super.initState();
     _logic.init(context, () {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
   }
 
@@ -27,56 +31,78 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Tìm Truyện Nâng Cao')),
+      appBar: AppBar(title: const Text('Tìm Truyện Nâng Cao')),
       body: ListView(
-        padding: EdgeInsets.symmetric(vertical: 16.0),
-        children: [
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        children: <Widget>[
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               controller: _logic.searchController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Tên truyện',
                 border: OutlineInputBorder(),
               ),
             ),
           ),
-          ExpansionTile(
-            title: Text('Tags'),
-            children: _buildTagsList(),
-          ),
+          ExpansionTile(title: const Text('Tags'), children: _buildTagsList()),
           _buildComboBox(
             label: 'Độ an toàn',
-            items: ['Tất cả', 'safe', 'suggestive', 'erotica', 'pornographic'],
+            items: const <String>[
+              'Tất cả',
+              'safe',
+              'suggestive',
+              'erotica',
+              'pornographic',
+            ],
             value: _logic.safetyFilter,
-            onChanged: (value) => setState(() => _logic.safetyFilter = value!),
+            onChanged: (String? value) =>
+                setState(() => _logic.safetyFilter = value!),
           ),
           _buildComboBox(
             label: 'Tình trạng',
-            items: ['Tất cả', 'ongoing', 'completed', 'hiatus', 'cancelled'],
+            items: const <String>[
+              'Tất cả',
+              'ongoing',
+              'completed',
+              'hiatus',
+              'cancelled',
+            ],
             value: _logic.statusFilter,
-            onChanged: (value) => setState(() => _logic.statusFilter = value!),
+            onChanged: (String? value) =>
+                setState(() => _logic.statusFilter = value!),
           ),
           _buildComboBox(
             label: 'Dành cho',
-            items: ['Tất cả', 'shounen', 'shoujo', 'seinen', 'josei'],
+            items: const <String>[
+              'Tất cả',
+              'shounen',
+              'shoujo',
+              'seinen',
+              'josei',
+            ],
             value: _logic.demographicFilter,
-            onChanged: (value) =>
+            onChanged: (String? value) =>
                 setState(() => _logic.demographicFilter = value!),
           ),
           _buildComboBox(
             label: 'Sắp xếp theo',
-            items: ['Mới cập nhật', 'Truyện mới', 'Theo dõi nhiều nhất'],
+            items: const <String>[
+              'Mới cập nhật',
+              'Truyện mới',
+              'Theo dõi nhiều nhất',
+            ],
             value: _logic.sortBy,
-            onChanged: (value) => setState(() => _logic.sortBy = value!),
+            onChanged: (String? value) =>
+                setState(() => _logic.sortBy = value!),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: ElevatedButton(
               onPressed: _logic.performSearch,
               child: _logic.isLoading
-                  ? CircularProgressIndicator(color: Colors.white)
-                  : Text('Tìm kiếm'),
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Tìm kiếm'),
             ),
           ),
         ],
@@ -85,22 +111,22 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   }
 
   List<Widget> _buildTagsList() {
-    Map<String, List<TagInfo>> groupedTags = {};
-    for (var tag in _logic.availableTags) {
-      groupedTags.putIfAbsent(tag.group, () => []).add(tag);
+    final Map<String, List<Tag>> groupedTags = <String, List<Tag>>{};
+    for (final Tag tag in _logic.availableTags) {
+      groupedTags.putIfAbsent(tag.attributes.group, () => <Tag>[]).add(tag);
     }
 
-    return groupedTags.entries.map((entry) {
+    return groupedTags.entries.map((MapEntry<String, List<Tag>> entry) {
       return ExpansionTile(
         title: Text(entry.key.toUpperCase()),
-        children: entry.value.map((tag) {
-          bool isIncluded = _logic.selectedTags.contains(tag.id);
-          bool isExcluded = _logic.excludedTags.contains(tag.id);
+        children: entry.value.map((Tag tag) {
+          final bool isIncluded = _logic.selectedTags.contains(tag.id);
+          final bool isExcluded = _logic.excludedTags.contains(tag.id);
           return ListTile(
-            title: Text(tag.name),
+            title: Text(tag.attributes.name['en'] ?? 'Unknown Tag'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: <Widget>[
                 IconButton(
                   icon: Icon(
                     isIncluded
@@ -138,10 +164,13 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
       child: DropdownButtonFormField<String>(
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
         ),
         items: items
-            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+            .map(
+              (String item) =>
+                  DropdownMenuItem<String>(value: item, child: Text(item)),
+            )
             .toList(),
         value: value,
         onChanged: onChanged,

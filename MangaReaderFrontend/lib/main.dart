@@ -3,5 +3,6 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 
 void main() {
-  runApp(MangaReaderApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MangaReaderApp());
 }

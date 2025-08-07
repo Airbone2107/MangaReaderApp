@@ -7,14 +7,14 @@ class ScaffoldWithAnimatedAppBar extends StatefulWidget {
   final List<Widget>? actions;
 
   const ScaffoldWithAnimatedAppBar({
-    Key? key,
+    super.key,
     required this.title,
     required this.bodyBuilder,
     this.actions,
-  }) : super(key: key);
+  });
 
   @override
-  _ScaffoldWithAnimatedAppBarState createState() =>
+  State<ScaffoldWithAnimatedAppBar> createState() =>
       _ScaffoldWithAnimatedAppBarState();
 }
 
@@ -46,7 +46,8 @@ class _ScaffoldWithAnimatedAppBarState
       setState(() => _showScrollToTopButton = false);
     }
 
-    final scrollDirection = _scrollController.position.userScrollDirection;
+    final ScrollDirection scrollDirection =
+        _scrollController.position.userScrollDirection;
     if (scrollDirection == ScrollDirection.reverse && _isAppBarVisible) {
       setState(() => _isAppBarVisible = false);
     } else if (scrollDirection == ScrollDirection.forward &&
@@ -59,7 +60,7 @@ class _ScaffoldWithAnimatedAppBarState
     setState(() => _isAppBarVisible = true);
     _scrollController.animateTo(
       0,
-      duration: Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
     );
   }
@@ -67,13 +68,13 @@ class _ScaffoldWithAnimatedAppBarState
   @override
   Widget build(BuildContext context) {
     final double statusBarHeight = MediaQuery.of(context).padding.top;
-    final double appBarHeight = kToolbarHeight;
+    const double appBarHeight = kToolbarHeight;
 
     return Scaffold(
       body: Stack(
-        children: [
+        children: <Widget>[
           AnimatedPadding(
-            duration: Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             padding: EdgeInsets.only(
                 top: _isAppBarVisible
@@ -82,7 +83,7 @@ class _ScaffoldWithAnimatedAppBarState
             child: widget.bodyBuilder(_scrollController),
           ),
           AnimatedPositioned(
-            duration: Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             top: _isAppBarVisible ? 0 : -(appBarHeight + statusBarHeight),
             left: 0,
@@ -103,7 +104,7 @@ class _ScaffoldWithAnimatedAppBarState
           ? FloatingActionButton(
               mini: true,
               onPressed: _scrollToTop,
-              child: Icon(Icons.arrow_upward),
+              child: const Icon(Icons.arrow_upward),
             )
           : null,
     );

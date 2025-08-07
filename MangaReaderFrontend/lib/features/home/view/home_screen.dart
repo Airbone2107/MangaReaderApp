@@ -5,7 +5,7 @@ import '../../../shared_widgets/manga_grid_view.dart';
 import '../../../shared_widgets/scaffold_with_animated_app_bar.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -18,9 +18,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return ScaffoldWithAnimatedAppBar(
       title: 'Manga Reader',
-      actions: [
+      actions: <Widget>[
         IconButton(
-          icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
+          icon: Icon(_isGridView ? Icons.grid_view : Icons.list),
           onPressed: () {
             setState(() {
               _isGridView = !_isGridView;
@@ -28,9 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ],
-      bodyBuilder: (controller) => MangaGridView(
+      bodyBuilder: (ScrollController controller) => MangaGridView(
         sortManga: SortManga(
-          languages: ['en', 'vi'],
+          languages: <String>['en', 'vi'],
         ),
         controller: controller,
         isGridView: _isGridView,

@@ -5,18 +5,20 @@ import '../../home/view/home_screen.dart';
 import '../../search/view/manga_search_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
+
   @override
-  _MainNavigationScreenState createState() => _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
 
-  final List<Widget> _screens = [
-    HomeScreen(),
-    AdvancedSearchScreen(),
-    AccountScreen(),
+  final List<Widget> _screens = <Widget>[
+    const HomeScreen(),
+    const AdvancedSearchScreen(),
+    const AccountScreen(),
   ];
 
   void _onTabTapped(int index) {
@@ -38,7 +40,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: PageView(
         controller: _pageController,
         children: _screens,
-        onPageChanged: (index) {
+        onPageChanged: (int index) {
           setState(() {
             _selectedIndex = index;
           });
@@ -47,7 +49,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onTabTapped,
-        items: const [
+        items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Trang Chủ',

@@ -3,6 +3,7 @@ import '../../../data/models/chapter_model.dart';
 import '../../../data/services/mangadex_api_service.dart';
 import '../../../data/services/user_api_service.dart';
 import '../../../data/storage/secure_storage_service.dart';
+import '../../../utils/logger.dart';
 import '../view/chapter_reader_screen.dart';
 
 class ChapterReaderLogic {
@@ -24,8 +25,8 @@ class ChapterReaderLogic {
   }
 
   void _onScroll() {
-    final currentOffset = scrollController.offset;
-    final delta = currentOffset - lastOffset;
+    final double currentOffset = scrollController.offset;
+    final double delta = currentOffset - lastOffset;
 
     if (delta.abs() > scrollThreshold) {
       if (delta > 0 && areBarsVisible) {
@@ -38,13 +39,15 @@ class ChapterReaderLogic {
   }
 
   int getCurrentIndex(Chapter chapter) {
-    return chapter.chapterList
-        .indexWhere((ch) => ch['id'] == chapter.chapterId);
+    return chapter.chapterList.indexWhere(
+      (dynamic ch) => ch['id'] == chapter.chapterId,
+    );
   }
 
   String getChapterDisplayName(Map<String, dynamic> chapter) {
-    String chapterNumber = chapter['attributes']['chapter'] ?? 'N/A';
-    String chapterTitle = chapter['attributes']['title'] ?? '';
+    final String chapterNumber =
+        chapter['attributes']['chapter'] as String? ?? 'N/A';
+    final String chapterTitle = chapter['attributes']['title'] as String? ?? '';
     return chapterTitle.isEmpty || chapterTitle == chapterNumber
         ? 'Chương $chapterNumber'
         : 'Chương $chapterNumber: $chapterTitle';
@@ -54,36 +57,48 @@ class ChapterReaderLogic {
     return mangaDexService.fetchChapterPages(chapterId);
   }
 
-  // Danh sách chương được sắp xếp theo thứ tự giảm dần (chương mới nhất ở đầu).
-  // Vì vậy, "chương kế tiếp" (số chương lớn hơn) sẽ có chỉ số (index) nhỏ hơn trong danh sách.
   void goToNextChapter(
-      BuildContext context, Chapter chapter, int currentIndex) {
+    BuildContext context,
+    Chapter chapter,
+    int currentIndex,
+  ) {
     if (currentIndex > 0) {
-      // Có thể đi tới chương có index nhỏ hơn (số chương lớn hơn)
-      var nextChapterData = chapter.chapterList[currentIndex - 1];
-      _navigateToChapter(context, chapter, nextChapterData);
+      final dynamic nextChapterData = chapter.chapterList[currentIndex - 1];
+      _navigateToChapter(
+        context,
+        chapter,
+        nextChapterData as Map<String, dynamic>,
+      );
     }
   }
 
-  // Tương tự, "chương trước" (số chương nhỏ hơn) sẽ có chỉ số (index) lớn hơn.
   void goToPreviousChapter(
-      BuildContext context, Chapter chapter, int currentIndex) {
+    BuildContext context,
+    Chapter chapter,
+    int currentIndex,
+  ) {
     if (currentIndex < chapter.chapterList.length - 1) {
-      // Có thể đi tới chương có index lớn hơn (số chương nhỏ hơn)
-      var prevChapterData = chapter.chapterList[currentIndex + 1];
-      _navigateToChapter(context, chapter, prevChapterData);
+      final dynamic prevChapterData = chapter.chapterList[currentIndex + 1];
+      _navigateToChapter(
+        context,
+        chapter,
+        prevChapterData as Map<String, dynamic>,
+      );
     }
   }
 
-  void _navigateToChapter(BuildContext context, Chapter currentChapter,
-      Map<String, dynamic> newChapterData) {
+  void _navigateToChapter(
+    BuildContext context,
+    Chapter currentChapter,
+    Map<String, dynamic> newChapterData,
+  ) {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => ChapterReaderScreen(
+        builder: (BuildContext context) => ChapterReaderScreen(
           chapter: Chapter(
             mangaId: currentChapter.mangaId,
-            chapterId: newChapterData['id'],
+            chapterId: newChapterData['id'] as String,
             chapterName: getChapterDisplayName(newChapterData),
             chapterList: currentChapter.chapterList,
           ),
@@ -94,65 +109,83 @@ class ChapterReaderLogic {
 
   Future<void> followManga(BuildContext context, String mangaId) async {
     try {
-      final token = await SecureStorageService.getToken();
+      final String? token = await SecureStorageService.getToken();
       if (token == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Vui lòng đăng nhập để theo dõi truyện.')),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vui lòng đăng nhập để theo dõi truyện.'),
+            ),
+          );
+        }
         return;
       }
       await userService.addToFollowing(mangaId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã thêm truyện vào danh sách theo dõi.')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã thêm truyện vào danh sách theo dõi.'),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi thêm truyện: $e')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi khi thêm truyện: $e')));
+      }
     }
   }
 
   Future<void> removeFromFollowing(BuildContext context, String mangaId) async {
     try {
-      final token = await SecureStorageService.getToken();
+      final String? token = await SecureStorageService.getToken();
       if (token == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Vui lòng đăng nhập để bỏ theo dõi truyện.')),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vui lòng đăng nhập để bỏ theo dõi truyện.'),
+            ),
+          );
+        }
         return;
       }
       await userService.removeFromFollowing(mangaId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã bỏ theo dõi truyện.')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã bỏ theo dõi truyện.')));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi bỏ theo dõi truyện: $e')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi bỏ theo dõi truyện: $e')),
+        );
+      }
     }
   }
 
   Future<bool> isFollowingManga(String mangaId) async {
     try {
-      final token = await SecureStorageService.getToken();
+      final String? token = await SecureStorageService.getToken();
       if (token == null) {
         return false;
       }
       return await userService.checkIfUserIsFollowing(mangaId);
-    } catch (e) {
-      print("Lỗi khi kiểm tra theo dõi: $e");
+    } catch (e, s) {
+      logger.w('Lỗi khi kiểm tra theo dõi', error: e, stackTrace: s);
       return false;
     }
   }
 
   Future<void> updateProgress(String mangaId, String chapterId) async {
     try {
-      final token = await SecureStorageService.getToken();
+      final String? token = await SecureStorageService.getToken();
       if (token != null) {
         await userService.updateReadingProgress(mangaId, chapterId);
       }
-    } catch (e) {
-      print('Lỗi khi cập nhật tiến độ đọc: $e');
+    } catch (e, s) {
+      logger.w('Lỗi khi cập nhật tiến độ đọc', error: e, stackTrace: s);
     }
   }
 

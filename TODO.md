@@ -1,974 +1,511 @@
-# Hướng Dẫn Cập Nhật Google Sign-In Lên v7.x
+Chắc chắn rồi! Dưới đây là tệp `TODO.md` hướng dẫn chi tiết từng bước để tạo Unit Test cho các Model của bạn.
 
-Tài liệu này hướng dẫn chi tiết các bước cần thiết để sửa lỗi sau khi nâng cấp `google_sign_in` từ phiên bản 6.x lên 7.x trong dự án Flutter, cũng như các thay đổi tương ứng ở phía Backend Node.js.
+<!-- TODO.md -->
+```markdown
+# Hướng dẫn tạo Unit Test cho các Model Manga
 
-## Mục tiêu
+Tài liệu này hướng dẫn chi tiết cách viết unit test cho các model trong thư mục `lib/data/models/manga` để đảm bảo chúng hoạt động chính xác với việc chuyển đổi JSON (serialization/deserialization) bằng cách sử dụng `freezed` và `json_serializable`.
 
-1.  Khắc phục lỗi `The getter 'accessToken' isn't defined for the type 'GoogleSignInAuthentication'`.
-2.  Khắc phục lỗi `The class 'GoogleSignIn' doesn't have an unnamed constructor`.
-3.  Khắc phục lỗi `The method 'signIn' isn't defined for the type 'GoogleSignIn'`.
-4.  Chuyển đổi phương thức xác thực từ `accessToken` sang `idToken` để tuân thủ API mới và tăng cường bảo mật.
-
----
-
-## Bước 1: Cập nhật Backend để xác thực bằng `idToken`
-
-Thay đổi quan trọng nhất trong `google_sign_in` v7 là không còn cung cấp `accessToken` một cách trực tiếp. Thay vào đó, chúng ta sẽ gửi `idToken` từ Flutter đến backend và sử dụng `google-auth-library` để xác thực token này.
-
-### 1.1. Chỉnh sửa file `MangaReaderBackend/routes/userRoutes.js`
-
-Mở file `MangaReaderBackend/routes/userRoutes.js` và cập nhật lại route `POST /auth/google`. Chúng ta sẽ thay thế logic lấy thông tin người dùng bằng `fetch` và `accessToken` bằng logic xác thực `idToken` an toàn hơn.
-
-```javascript
-// MangaReaderBackend/routes/userRoutes.js
-const express = require('express');
-const router = express.Router();
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
-const { OAuth2Client } = require('google-auth-library');
-const { JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } = process.env;
-
-// Khởi tạo client với đầy đủ thông tin
-const client = new OAuth2Client(
-  GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET,
-  GOOGLE_REDIRECT_URI || 'https://manga-reader-app-backend.onrender.com/api/users/auth/google/callback'
-);
-
-// Các route cho OAuth Web application
-// Tạo URL xác thực Google
-router.get('/auth/google/url', (req, res) => {
-  const authUrl = client.generateAuthUrl({
-    access_type: 'offline',
-    scope: [
-      'https://www.googleapis.com/auth/userinfo.profile',
-      'https://www.googleapis.com/auth/userinfo.email'
-    ]
-  });
-  
-  res.json({ authUrl });
-});
-
-// Xử lý callback từ Google
-router.get('/auth/google/callback', async (req, res) => {
-  const { code } = req.query;
-  
-  if (!code) {
-    return res.status(400).json({ message: 'Không có mã xác thực' });
-  }
-  
-  try {
-    const { tokens } = await client.getToken({ code });
-    
-    const ticket = await client.verifyIdToken({
-      idToken: tokens.id_token,
-      audience: GOOGLE_CLIENT_ID
-    });
-    
-    const payload = ticket.getPayload();
-    const { email, sub: googleId, name, picture } = payload;
-    
-    // Tìm hoặc tạo user
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = new User({
-        googleId,
-        email,
-        displayName: name,
-        photoURL: picture,
-      });
-      await user.save();
-    }
-    
-    // Tạo JWT token
-    const token = jwt.sign(
-      { userId: user._id }, 
-      JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
-    );
-    
-    // Lưu token vào cơ sở dữ liệu
-    await user.addToken(token);
-    // Chuyển hướng đến frontend với token
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5074';
-    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
-  } catch (error) {
-    console.error('Lỗi xác thực Google:', error);
-    if (error.response && error.response.data) {
-      console.error('Google API Error:', error.response.data);
-      res.status(400).json({ message: `Lỗi từ Google: ${error.response.data.error_description || error.response.data.error}` });
-    } else {
-      res.status(500).json({ message: 'Lỗi máy chủ khi xác thực Google' });
-    }
-  }
-});
-
-// Route đăng nhập Google cho Android (ĐÃ CẬP NHẬT)
-router.post('/auth/google', async (req, res) => {
-  const { idToken } = req.body; // Thay accessToken bằng idToken
-
-  if (!idToken) {
-    return res.status(400).json({ message: 'Không có idToken xác thực' });
-  }
-
-  try {
-    // Xác thực idToken bằng google-auth-library
-    const ticket = await client.verifyIdToken({
-      idToken: idToken,
-      audience: GOOGLE_CLIENT_ID, // ID client của ứng dụng Android
-    });
-    
-    const payload = ticket.getPayload();
-    if (!payload) {
-        throw new Error('Không thể lấy thông tin từ idToken');
-    }
-
-    const { email, sub: googleId, name, picture } = payload;
-
-    // Tìm hoặc tạo user
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = new User({
-        googleId,
-        email,
-        displayName: name,
-        photoURL: picture,
-      });
-      await user.save();
-    }
-
-    // Tạo JWT token của riêng bạn
-    const token = jwt.sign(
-      { userId: user._id }, 
-      JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
-    );
-
-    // Lưu token vào cơ sở dữ liệu
-    await user.addToken(token);
-
-    res.json({ token });
-  } catch (error) {
-    console.error('Lỗi xác thực Google:', error);
-    res.status(401).json({ message: 'Token không hợp lệ' });
-  }
-});
-
-// Middleware xác thực JWT
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  console.log('[AuthMiddleware] Received Token:', token);
-  console.log('[AuthMiddleware] JWT_SECRET Exists:', !!JWT_SECRET);
-
-  if (!token) return res.status(401).json({ message: 'Token không tìm thấy' });
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error('[AuthMiddleware] JWT Verification Error:', err.name, err.message);
-      if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Token đã hết hạn' });
-      }
-      return res.status(403).json({ message: 'Token không hợp lệ' });
-    }
-    req.user = user;
-    next();
-  });
-};
-
-// Thêm manga vào danh sách theo dõi
-router.post('/follow', authenticateToken, async (req, res) => {
-  try {
-    const { mangaId } = req.body;
-    const user = await User.findById(req.user.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
-
-    if (!mangaId) {
-      return res.status(400).json({ message: 'Thiếu mangaId' });
-    }
-
-    if (!user.followingManga.includes(mangaId)) {
-      user.followingManga.push(mangaId);
-      await user.save();
-    }
-
-    res.json(user);
-  } catch (error) {
-    console.error('Follow error:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Xóa manga khỏi danh sách theo dõi
-router.post('/unfollow', authenticateToken, async (req, res) => {
-  try {
-    const { mangaId } = req.body;
-    const user = await User.findById(req.user.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
-
-    if (!mangaId) {
-      return res.status(400).json({ message: 'Thiếu mangaId' });
-    }
-
-    user.followingManga = user.followingManga.filter(id => id !== mangaId);
-    await user.save();
-
-    res.json(user);
-  } catch (error) {
-    console.error('Unfollow error:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Cập nhật tiến độ đọc
-router.post('/reading-progress', authenticateToken, async (req, res) => {
-  try {
-    const { mangaId, lastChapter } = req.body;
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
-
-    if (!mangaId || !lastChapter) {
-      return res.status(400).json({ message: 'Thiếu thông tin cần thiết' });
-    }
-
-    const readingIndex = user.readingManga.findIndex(m => m.mangaId === mangaId);
-
-    if (readingIndex > -1) {
-      user.readingManga[readingIndex].lastChapter = lastChapter;
-      user.readingManga[readingIndex].lastReadAt = new Date();
-    } else {
-      user.readingManga.push({
-        mangaId,
-        lastChapter: lastChapter,
-        lastReadAt: new Date()
-      });
-    }
-
-    await user.save();
-    res.json({ readingManga: user.readingManga });
-  } catch (error) {
-    console.error('Update reading progress error:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Route lấy thông tin người dùng từ token
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId).select('-tokens');
-
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
-    
-    res.json(user);
-  } catch (error) {
-    console.error('Lỗi lấy thông tin người dùng:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Route đăng xuất
-router.post('/logout', authenticateToken, async (req, res) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    const user = await User.findById(req.user.userId);
-
-    if (user && token) {
-      await user.removeToken(token);
-    }
-    res.json({ message: 'Đăng xuất thành công' });
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({ message: 'Lỗi khi đăng xuất' });
-  }
-});
-
-// API kiểm tra xem người dùng có theo dõi manga không
-router.get('/user/following/:mangaId', authenticateToken, async (req, res) => {
-  const { mangaId } = req.params;
-
-  try {
-    const user = await User.findById(req.user.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
-
-    // Kiểm tra xem mangaId có trong danh sách manga đang theo dõi của người dùng không
-    const isFollowing = user.followingManga.includes(mangaId);
-    res.json({ isFollowing });
-  } catch (error) {
-    console.error('Error checking following status:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Route lấy lịch sử đọc của người dùng
-router.get('/reading-history', authenticateToken, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId).select('readingManga'); // Chỉ lấy trường readingManga
-
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
-
-    // Sắp xếp lịch sử theo thời gian đọc gần nhất (giảm dần)
-    const sortedHistory = user.readingManga.sort((a, b) => b.lastReadAt - a.lastReadAt);
-
-    // Trả về danh sách lịch sử đọc (chỉ gồm mangaId, chapterId, lastReadAt)
-    // Backend trả về đúng cấu trúc mà ReadingHistoryService.cs mong đợi
-    const historyResponse = sortedHistory.map(item => ({
-        mangaId: item.mangaId,
-        chapterId: item.lastChapter, // Đảm bảo tên trường khớp
-        lastReadAt: item.lastReadAt
-    }));
-
-
-    res.json(historyResponse); // Trả về mảng lịch sử đã sắp xếp
-
-  } catch (error) {
-    console.error('Lỗi lấy lịch sử đọc:', error);
-    res.status(500).json({ message: 'Lỗi máy chủ khi lấy lịch sử đọc' });
-  }
-});
-
-module.exports = router;
-```
+## Mục lục
+1.  [Giới thiệu về Unit Testing](#1-giới-thiệu-về-unit-testing)
+2.  [Cài đặt môi trường Test](#2-cài-đặt-môi-trường-test)
+3.  [Tạo file Test cho từng Model](#3-tạo-file-test-cho-từng-model)
+    *   [3.1. Test cho `relationship.dart`](#31-test-cho-relationshipdart)
+    *   [3.2. Test cho `tag.dart`](#32-test-cho-tagdart)
+    *   [3.3. Test cho `cover.dart`](#33-test-cho-coverdart)
+    *   [3.4. Test cho `manga_attributes.dart`](#34-test-cho-manga_attributesdart)
+    *   [3.5. Test cho `manga.dart`](#35-test-cho-mangadart)
+    *   [3.6. Test cho `list_response.dart`](#36-test-cho-list_responsedart)
+4.  [Chạy tất cả các Test](#4-chạy-tất-cả-các-test)
+5.  [Tổng kết](#5-tổng-kết)
 
 ---
 
-## Bước 2: Cập nhật Frontend (Flutter) để sử dụng API mới
+## 1. Giới thiệu về Unit Testing
 
-Bây giờ chúng ta sẽ cập nhật code Flutter để gửi `idToken` và sửa các lỗi biên dịch.
+**Unit Testing** là một phương pháp kiểm thử phần mềm mà trong đó các "đơn vị" (unit) riêng lẻ của mã nguồn—thường là các hàm, phương thức, hoặc lớp—được kiểm tra độc lập để xác định xem chúng có hoạt động đúng như mong đợi hay không.
 
-### 2.1. Đảm bảo `pubspec.yaml` được cập nhật
-Hãy chắc chắn rằng phiên bản `google_sign_in` trong file `MangaReaderFrontend/pubspec.yaml` của bạn là `^7.0.0` hoặc cao hơn. Phiên bản đề xuất là `^7.1.1`.
+Đối với các model dữ liệu, unit test đặc biệt quan trọng để:
+*   **Xác thực việc phân tích cú pháp JSON (Parsing)**: Đảm bảo rằng model có thể được tạo chính xác từ một chuỗi JSON nhận được từ API.
+*   **Đảm bảo tính đúng đắn của việc tuần tự hóa (Serialization)**: Kiểm tra xem model có thể được chuyển đổi thành JSON một cách chính xác để gửi đi hay không.
+*   **Phát hiện lỗi sớm**: Khi cấu trúc API thay đổi, các unit test sẽ nhanh chóng báo lỗi, giúp bạn cập nhật model kịp thời.
 
-```yaml
-# MangaReaderFrontend/pubspec.yaml
-name: manga_reader_app
-description: "A new Flutter project."
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+## 2. Cài đặt môi trường Test
 
-# The following defines the version and build number for your application.
-# A version number is three numbers separated by dots, like 1.2.43
-# followed by an optional build number separated by a +.
-# Both the version and the builder number may be overridden in flutter
-# build by specifying --build-name and --build-number, respectively.
-# In Android, build-name is used as versionName while build-number used as versionCode.
-# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
-# Read more about iOS versioning at
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+Dự án của bạn đã có sẵn các dependency cần thiết trong `pubspec.yaml`. Thư mục `test` là nơi chứa tất cả các file test của dự án. Cấu trúc thư mục trong `test` nên phản ánh cấu trúc của `lib` để dễ dàng quản lý.
 
-environment:
-  sdk: '>=3.0.0 <4.0.0' # Cập nhật SDK constraint nếu cần
+Ví dụ, để test các model trong `lib/data/models/manga/`, chúng ta sẽ tạo các file test trong `test/data/models/manga/`.
 
-# Dependencies specify other packages that your package needs in order to work.
-# To automatically upgrade your package dependencies to the latest versions
-# consider running `flutter pub upgrade --major-versions`. Alternatively,
-# dependencies can be manually updated by changing the version numbers below to
-# the latest version available on pub.dev. To see which dependencies have newer
-# versions available, run `flutter pub outdated`.
-dependencies:
-  flutter:
-    sdk: flutter
-  http: ^1.2.2
-  flutter_cache_manager: ^3.4.1
-  cached_network_image: ^3.4.1
-  # Đảm bảo phiên bản google_sign_in là 7.x
-  google_sign_in: ^7.1.1 
-  flutter_secure_storage: ^9.2.2
-  
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+## 3. Tạo file Test cho từng Model
 
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/placeholder.png
-```
+Chúng ta sẽ tạo một file test riêng cho mỗi model. Mỗi file test sẽ chứa các trường hợp kiểm thử cho phương thức `fromJson` và `toJson`.
 
-Sau khi lưu, chạy `flutter pub get` trong terminal tại thư mục `MangaReaderFrontend`.
+### 3.1. Test cho `relationship.dart`
 
-### 2.2. Cập nhật `user_api_service.dart`
+Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\relationship_test.dart`
 
-Sửa đổi hàm `signInWithGoogle` để lấy `idToken` thay vì `accessToken` và gửi nó đến backend.
-
+<!-- MangaReaderFrontend\test\data\models\manga\relationship_test.dart -->
 ```dart
-// MangaReaderFrontend/lib/data/services/user_api_service.dart
-import 'dart:io';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:google_sign_in/google_sign_in.dart';
-import '../../config/app_config.dart'; // Import config
-import '../models/user_model.dart';
-import '../storage/secure_storage_service.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader_app/data/models/manga/relationship.dart';
 
-class UserApiService {
-  final String baseUrl;
-  final http.Client client;
-
-  // Sử dụng AppConfig.baseUrl làm giá trị mặc định
-  UserApiService({
-    this.baseUrl = AppConfig.baseUrl,
-    http.Client? client,
-  }) : client = client ?? http.Client();
-
-  Future<void> signInWithGoogle(GoogleSignInAccount googleUser) async {
-    try {
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      print('Authenticating with Google...');
-
-      final String? idToken = googleAuth.idToken;
-      if (idToken == null) {
-        throw Exception('Không lấy được ID Token từ Google');
+void main() {
+  group('Relationship Model Test', () {
+    // 1. Dữ liệu JSON mẫu
+    const String relationshipJson = '''
+    {
+      "id": "f5d2f626-444f-4a72-887c-4bf1757e283b",
+      "type": "author",
+      "attributes": {
+        "name": "Author Name"
       }
-
-      print('ID Token available.');
-
-      final response = await client.post(
-        Uri.parse('$baseUrl/api/users/auth/google'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'idToken': idToken}), // Gửi idToken thay vì accessToken
-      );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final backendToken = data['token'];
-        await SecureStorageService.saveToken(backendToken);
-        print('Đăng nhập thành công. Token từ backend: $backendToken');
-      } else {
-        throw HttpException(
-            'Đăng nhập thất bại: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      print('Error in signInWithGoogle: $e');
-      throw Exception('Lỗi đăng nhập: $e');
     }
-  }
+    ''';
 
-  Future<void> logout() async {
-    try {
-      final token = await SecureStorageService.getToken();
-      if (token == null) return;
+    final relationshipMap = json.decode(relationshipJson) as Map<String, dynamic>;
 
-      final response = await client.post(
-        Uri.parse('$baseUrl/api/users/logout'),
-        headers: _buildHeaders(token),
-      );
+    // 2. Test phương thức fromJson
+    test('fromJson should correctly parse the JSON', () {
+      // Arrange & Act
+      final relationship = Relationship.fromJson(relationshipMap);
 
-      if (response.statusCode == 200) {
-        await SecureStorageService.removeToken();
-      } else {
-        throw HttpException('Đăng xuất thất bại');
-      }
-    } catch (e) {
-      throw Exception('Lỗi khi đăng xuất: $e');
-    }
-  }
+      // Assert
+      expect(relationship.id, 'f5d2f626-444f-4a72-887c-4bf1757e283b');
+      expect(relationship.type, 'author');
+      expect(relationship.attributes, isA<Map<String, dynamic>>());
+      expect(relationship.attributes!['name'], 'Author Name');
+    });
 
-  Future<User> getUserData() async {
-    final token = await _getTokenOrThrow();
-    print("getUserData đang xử lý, token hiện tại là: $token");
+    // 3. Test phương thức toJson
+    test('toJson should correctly convert the object to JSON', () {
+      // Arrange
+      final relationship = Relationship.fromJson(relationshipMap);
 
-    final response = await client.get(
-      Uri.parse('$baseUrl/api/users'),
-      headers: _buildHeaders(token),
-    );
-    print("getUserData đã xử lý xong");
-    if (response.statusCode == 200) {
-      final userData = jsonDecode(response.body);
-      return User.fromJson(userData);
-    } else if (response.statusCode == 403) {
-      throw HttpException('403');
-    } else {
-      throw HttpException(
-          'Không thể lấy thông tin user. Mã lỗi: ${response.statusCode}');
-    }
-  }
+      // Act
+      final resultJson = relationship.toJson();
 
-  Future<void> addToFollowing(String mangaId) async {
-    final token = await _getTokenOrThrow();
-    try {
-      final response = await client.post(
-        Uri.parse('$baseUrl/api/users/follow'),
-        headers: _buildHeaders(token),
-        body: jsonEncode({'mangaId': mangaId}),
-      );
-      if (response.statusCode != 200) {
-        final error = jsonDecode(response.body);
-        throw HttpException(
-            error['message'] ?? 'Không thể thêm vào danh sách theo dõi');
-      }
-    } catch (e) {
-      print('Error in addToFollowing: $e');
-      throw Exception('Lỗi khi thêm manga: $e');
-    }
-  }
+      // Assert
+      expect(resultJson, relationshipMap);
+    });
 
-  Future<void> removeFromFollowing(String mangaId) async {
-    final token = await _getTokenOrThrow();
-    try {
-      final response = await client.post(
-        Uri.parse('$baseUrl/api/users/unfollow'),
-        headers: _buildHeaders(token),
-        body: jsonEncode({'mangaId': mangaId}),
-      );
-      if (response.statusCode != 200) {
-        final error = jsonDecode(response.body);
-        throw HttpException(error['message'] ?? 'Không thể bỏ theo dõi truyện');
-      }
-    } catch (e) {
-      print('Error in removeFromFollowing: $e');
-      throw Exception('Lỗi khi bỏ theo dõi: $e');
-    }
-  }
+    // 4. Test trường hợp attributes là null
+    test('fromJson should handle null attributes', () {
+      // Arrange
+      final relationshipMapWithoutAttributes = <String, dynamic>{
+        'id': 'f5d2f626-444f-4a72-887c-4bf1757e283b',
+        'type': 'author',
+        'attributes': null
+      };
 
-  Future<bool> checkIfUserIsFollowing(String mangaId) async {
-    try {
-      final token = await SecureStorageService.getToken();
-      if (token == null) {
-        return false;
-      }
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/users/user/following/$mangaId'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> body = jsonDecode(response.body);
-        return body['isFollowing'] ?? false;
-      } else {
-        print('Error response status: ${response.statusCode}');
-        print('Error response body: ${response.body}');
-        throw Exception('Lỗi khi kiểm tra theo dõi: ${response.body}');
-      }
-    } catch (e) {
-      print("Error checking follow status: $e");
-      return false;
-    }
-  }
+      // Act
+      final relationship =
+          Relationship.fromJson(relationshipMapWithoutAttributes);
 
-
-  Future<void> updateReadingProgress(String mangaId, String lastChapter) async {
-    final token = await _getTokenOrThrow();
-    try {
-      final response = await client.post(
-        Uri.parse('$baseUrl/api/users/reading-progress'),
-        headers: _buildHeaders(token),
-        body: jsonEncode({
-          'mangaId': mangaId,
-          'lastChapter': lastChapter,
-        }),
-      );
-      if (response.statusCode != 200) {
-        final error = jsonDecode(response.body);
-        throw HttpException(
-            error['message'] ?? 'Không thể cập nhật tiến độ đọc');
-      }
-    } catch (e) {
-      print('Error in updateReadingProgress: $e');
-      throw Exception('Lỗi khi cập nhật tiến độ: $e');
-    }
-  }
-
-  Map<String, String> _buildHeaders(String token) {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-  }
-
-  Future<String> _getTokenOrThrow() async {
-    final token = await SecureStorageService.getToken();
-    if (token == null) {
-      throw HttpException('Không tìm thấy token');
-    }
-    return token;
-  }
-
-  void dispose() {
-    client.close();
-  }
+      // Assert
+      expect(relationship.id, 'f5d2f626-444f-4a72-887c-4bf1757e283b');
+      expect(relationship.type, 'author');
+      expect(relationship.attributes, isNull);
+    });
+  });
 }
 ```
 
-### 2.3. Cập nhật `account_logic.dart`
+### 3.2. Test cho `tag.dart`
 
-File này chứa logic chính của màn hình tài khoản. Chúng ta sẽ sửa lại cách khởi tạo `GoogleSignIn` và cách gọi hàm `signIn` cho đúng với API v7.
+Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\tag_test.dart`
 
+<!-- MangaReaderFrontend\test\data\models\manga\tag_test.dart -->
 ```dart
-// MangaReaderFrontend/lib/features/account/logic/account_logic.dart
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import '../../../data/models/chapter_model.dart';
-import '../../../data/models/user_model.dart';
-import '../../../data/services/mangadex_api_service.dart';
-import '../../../data/services/user_api_service.dart';
-import '../../../data/storage/secure_storage_service.dart';
-import '../../chapter_reader/view/chapter_reader_screen.dart';
-import '../../detail_manga/view/manga_detail_screen.dart';
+import 'dart:convert';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader_app/data/models/manga/tag.dart';
 
-class AccountScreenLogic {
-  final MangaDexApiService _mangaDexService = MangaDexApiService();
-  // Khởi tạo GoogleSignIn với các scope cần thiết. Đây là cách đúng trong v7.
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']); 
-  final UserApiService _userService =
-      UserApiService(); // Không cần truyền baseUrl
-  final Map<String, dynamic> _mangaCache = {};
-
-  User? user;
-  bool isLoading = false;
-  late BuildContext context;
-  late VoidCallback refreshUI;
-
-  Future<void> init(BuildContext context, VoidCallback refreshUI) async {
-    this.context = context;
-    this.refreshUI = refreshUI;
-    await _loadUser();
-  }
-
-  Future<void> _loadUser() async {
-    isLoading = true;
-    refreshUI();
-    try {
-      final hasToken = await SecureStorageService.hasValidToken();
-      if (hasToken) {
-        user = await _fetchUserData();
-      } else {
-        user = null;
+void main() {
+  group('Tag Model Test', () {
+    const String tagJson = '''
+    {
+      "id": "423e2eae-a7a2-4a8b-ac03-a8351462d71d",
+      "type": "tag",
+      "attributes": {
+        "name": {
+          "en": "Action"
+        },
+        "description": {
+          "en": "Description for Action"
+        },
+        "group": "genre",
+        "version": 1
       }
-    } catch (e) {
-      user = null;
-      if (e is HttpException && e.message == '403') {
-        await handleSignOut(); // Token is invalid, force sign out
+    }
+    ''';
+
+    final tagMap = json.decode(tagJson) as Map<String, dynamic>;
+
+    test('Tag.fromJson should correctly parse the JSON', () {
+      final tag = Tag.fromJson(tagMap);
+
+      expect(tag.id, '423e2eae-a7a2-4a8b-ac03-a8351462d71d');
+      expect(tag.type, 'tag');
+      expect(tag.attributes, isA<TagAttributes>());
+    });
+
+    test('Tag.toJson should correctly convert the object to JSON', () {
+      final tag = Tag.fromJson(tagMap);
+      final resultJson = tag.toJson();
+      expect(resultJson, tagMap);
+    });
+
+    test('TagAttributes.fromJson should correctly parse the JSON', () {
+      final attributes =
+          TagAttributes.fromJson(tagMap['attributes'] as Map<String, dynamic>);
+
+      expect(attributes.name['en'], 'Action');
+      expect(attributes.description['en'], 'Description for Action');
+      expect(attributes.group, 'genre');
+      expect(attributes.version, 1);
+    });
+
+    test('TagAttributes.toJson should correctly convert the object to JSON',
+        () {
+      final attributes =
+          TagAttributes.fromJson(tagMap['attributes'] as Map<String, dynamic>);
+      final resultJson = attributes.toJson();
+      expect(resultJson, tagMap['attributes']);
+    });
+  });
+}
+```
+
+### 3.3. Test cho `cover.dart`
+
+Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\cover_test.dart`
+
+<!-- MangaReaderFrontend\test\data\models\manga\cover_test.dart -->
+```dart
+import 'dart:convert';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader_app/data/models/manga/cover.dart';
+
+void main() {
+  group('Cover Model Test', () {
+    const String coverJson = '''
+    {
+      "id": "a925433a-236b-4b13-a4a3-731338d3393e",
+      "type": "cover_art",
+      "attributes": {
+        "fileName": "cover.jpg",
+        "description": "Main cover",
+        "volume": "1",
+        "locale": "en",
+        "version": 1,
+        "createdAt": "2021-05-24T17:03:00.000Z",
+        "updatedAt": "2021-05-24T17:03:00.000Z"
       }
-      print("Lỗi khi tải người dùng: $e");
-    } finally {
-      isLoading = false;
-      refreshUI();
     }
-  }
+    ''';
 
-  Future<void> handleSignIn() async {
-    isLoading = true;
-    refreshUI();
-    try {
-      // Hàm signIn() bây giờ trả về một GoogleSignInAccount? (có thể null)
-      final GoogleSignInAccount? account = await _googleSignIn.signIn();
-      if (account == null) {
-        // Người dùng đã hủy đăng nhập
-        throw Exception('Đăng nhập bị hủy');
-      }
-      await _userService.signInWithGoogle(account);
-      user = await _fetchUserData();
-    } catch (error) {
-      print('Lỗi đăng nhập: $error');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi đăng nhập: $error')));
-      user = null;
-    } finally {
-      isLoading = false;
-      refreshUI();
-    }
-  }
+    final coverMap = json.decode(coverJson) as Map<String, dynamic>;
 
-  Future<void> handleSignOut() async {
-    try {
-      await _googleSignIn.signOut();
-      await SecureStorageService.removeToken();
-      user = null;
-      refreshUI();
-    } catch (error) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi đăng xuất: $error')));
-    }
-  }
+    test('Cover.fromJson should correctly parse the JSON', () {
+      final cover = Cover.fromJson(coverMap);
 
-  Future<void> refreshUserData() async {
-    await _loadUser();
-  }
+      expect(cover.id, 'a925433a-236b-4b13-a4a3-731338d3393e');
+      expect(cover.type, 'cover_art');
+      expect(cover.attributes, isA<CoverAttributes>());
+    });
 
-  Future<User> _fetchUserData() async {
-    return await _userService.getUserData();
-  }
+    test('Cover.toJson should correctly convert the object to JSON', () {
+      final cover = Cover.fromJson(coverMap);
+      final resultJson = cover.toJson();
+      expect(resultJson, coverMap);
+    });
 
-  Future<void> handleUnfollow(String mangaId) async {
-    try {
-      if (user == null) throw Exception('Người dùng chưa đăng nhập');
-      isLoading = true;
-      refreshUI();
-      await _userService.removeFromFollowing(mangaId);
-      user = await _fetchUserData();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Đã bỏ theo dõi truyện')));
-    } catch (e) {
-      print('Error in handleUnfollow: $e');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi khi bỏ theo dõi: $e')));
-    } finally {
-      isLoading = false;
-      refreshUI();
-    }
-  }
+    test('CoverAttributes.fromJson should correctly parse the JSON', () {
+      final attributes = CoverAttributes.fromJson(
+          coverMap['attributes'] as Map<String, dynamic>);
 
-  Future<List<Map<String, dynamic>>> _getMangaListInfo(
-      List<String> mangaIds) async {
-    try {
-      final List<dynamic> mangas =
-          await _mangaDexService.fetchMangaByIds(mangaIds);
-      for (var manga in mangas) {
-        _mangaCache[manga['id']] = manga;
-      }
-      return mangas.cast<Map<String, dynamic>>();
-    } catch (e) {
-      print('Lỗi khi lấy thông tin danh sách manga: $e');
-      return [];
-    }
-  }
+      expect(attributes.fileName, 'cover.jpg');
+      expect(attributes.description, 'Main cover');
+      expect(attributes.volume, '1');
+      expect(attributes.locale, 'en');
+      expect(attributes.version, 1);
+      expect(attributes.createdAt, DateTime.parse('2021-05-24T17:03:00.000Z'));
+      expect(attributes.updatedAt, DateTime.parse('2021-05-24T17:03:00.000Z'));
+    });
 
-  Widget buildMangaListView(String title, List<String> mangaIds,
-      {bool isFollowing = false}) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _getMangaListInfo(mangaIds),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Card(
-              child: ListTile(
-                  title: Text(title),
-                  subtitle: Center(child: CircularProgressIndicator())));
+    test('CoverAttributes.toJson should correctly convert the object to JSON',
+        () {
+      final attributes = CoverAttributes.fromJson(
+          coverMap['attributes'] as Map<String, dynamic>);
+      final resultJson = attributes.toJson();
+      expect(resultJson, coverMap['attributes']);
+    });
+  });
+}
+```
+
+### 3.4. Test cho `manga_attributes.dart`
+
+Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\manga_attributes_test.dart`
+
+<!-- MangaReaderFrontend\test\data\models\manga\manga_attributes_test.dart -->
+```dart
+import 'dart:convert';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader_app/data/models/manga/manga_attributes.dart';
+import 'package:manga_reader_app/data/models/manga/tag.dart';
+
+void main() {
+  group('MangaAttributes Model Test', () {
+    const String mangaAttributesJson = '''
+    {
+      "title": { "en": "Test Manga" },
+      "altTitles": [ { "ja": "テスト漫画" } ],
+      "description": { "en": "This is a test manga." },
+      "isLocked": false,
+      "links": { "al": "12345" },
+      "originalLanguage": "ja",
+      "lastVolume": "5",
+      "lastChapter": "50",
+      "publicationDemographic": "shounen",
+      "status": "ongoing",
+      "year": 2020,
+      "contentRating": "safe",
+      "chapterNumbersResetOnNewVolume": false,
+      "availableTranslatedLanguages": ["en", "vi"],
+      "latestUploadedChapter": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
+      "tags": [
+        {
+          "id": "423e2eae-a7a2-4a8b-ac03-a8351462d71d",
+          "type": "tag",
+          "attributes": {
+            "name": { "en": "Action" },
+            "description": {},
+            "group": "genre",
+            "version": 1
+          }
         }
-        if (snapshot.hasError) {
-          return Card(
-              child: ListTile(
-                  title: Text(title),
-                  subtitle: Text('Lỗi: ${snapshot.error}')));
-        }
-        final mangas = snapshot.data ?? [];
-        for (var manga in mangas) _mangaCache[manga['id']] = manga;
-        return Card(
-          margin: EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(title,
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold))),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: mangaIds.length,
-                itemBuilder: (context, index) {
-                  final mangaId = mangaIds[index];
-                  final manga = _mangaCache[mangaId];
-                  if (manga == null) return SizedBox.shrink();
-                  String? lastReadChapter;
-                  if (!isFollowing && user != null) {
-                    final progress = user!.readingProgress.firstWhere(
-                        (p) => p.mangaId == mangaId,
-                        orElse: () => ReadingProgress(
-                            mangaId: mangaId,
-                            lastChapter: '',
-                            lastReadAt: DateTime.now()));
-                    lastReadChapter = progress.lastChapter;
-                  }
-                  return _buildMangaListItem(manga,
-                      isFollowing: isFollowing,
-                      mangaId: mangaId,
-                      lastReadChapter: lastReadChapter);
-                },
-              ),
-            ],
-          ),
-        );
+      ],
+      "state": "published",
+      "version": 1,
+      "createdAt": "2020-01-01T00:00:00.000Z",
+      "updatedAt": "2021-01-01T00:00:00.000Z"
+    }
+    ''';
+
+    final mangaAttributesMap =
+        json.decode(mangaAttributesJson) as Map<String, dynamic>;
+
+    test('MangaAttributes.fromJson should correctly parse the JSON', () {
+      final attributes = MangaAttributes.fromJson(mangaAttributesMap);
+
+      expect(attributes.title['en'], 'Test Manga');
+      expect(attributes.altTitles.first['ja'], 'テスト漫画');
+      expect(attributes.description['en'], 'This is a test manga.');
+      expect(attributes.isLocked, false);
+      expect(attributes.links!['al'], '12345');
+      expect(attributes.originalLanguage, 'ja');
+      expect(attributes.lastVolume, '5');
+      expect(attributes.lastChapter, '50');
+      expect(attributes.publicationDemographic, 'shounen');
+      expect(attributes.status, 'ongoing');
+      expect(attributes.year, 2020);
+      expect(attributes.contentRating, 'safe');
+      expect(attributes.chapterNumbersResetOnNewVolume, false);
+      expect(attributes.availableTranslatedLanguages, containsAll(<String>['en', 'vi']));
+      expect(attributes.latestUploadedChapter,
+          'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6');
+      expect(attributes.tags, isA<List<Tag>>());
+      expect(attributes.tags.first.id, '423e2eae-a7a2-4a8b-ac03-a8351462d71d');
+      expect(attributes.state, 'published');
+      expect(attributes.version, 1);
+      expect(attributes.createdAt, DateTime.parse('2020-01-01T00:00:00.000Z'));
+      expect(attributes.updatedAt, DateTime.parse('2021-01-01T00:00:00.000Z'));
+    });
+
+    test('MangaAttributes.toJson should correctly convert the object to JSON',
+        () {
+      final attributes = MangaAttributes.fromJson(mangaAttributesMap);
+      final resultJson = attributes.toJson();
+      expect(resultJson, mangaAttributesMap);
+    });
+  });
+}
+```
+
+### 3.5. Test cho `manga.dart`
+
+Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\manga_test.dart`
+
+<!-- MangaReaderFrontend\test\data\models\manga\manga_test.dart -->
+```dart
+import 'dart:convert';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader_app/data/models/manga/manga.dart';
+import 'package:manga_reader_app/data/models/manga/manga_attributes.dart';
+import 'package:manga_reader_app/data/models/manga/relationship.dart';
+
+void main() {
+  group('Manga Model Test', () {
+    const String mangaJson = '''
+    {
+      "id": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
+      "type": "manga",
+      "attributes": {
+        "title": { "en": "Test Manga" },
+        "altTitles": [],
+        "description": { "en": "Description" },
+        "isLocked": false,
+        "originalLanguage": "ja",
+        "status": "ongoing",
+        "contentRating": "safe",
+        "chapterNumbersResetOnNewVolume": false,
+        "tags": [],
+        "state": "published",
+        "version": 1,
+        "createdAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2021-01-01T00:00:00.000Z"
       },
-    );
-  }
+      "relationships": [
+        {
+          "id": "f5d2f626-444f-4a72-887c-4bf1757e283b",
+          "type": "author"
+        },
+        {
+          "id": "a925433a-236b-4b13-a4a3-731338d3393e",
+          "type": "cover_art"
+        }
+      ]
+    }
+    ''';
 
-  Widget _buildMangaListItem(Map<String, dynamic> manga,
-      {bool isFollowing = false,
-      required String mangaId,
-      String? lastReadChapter}) {
-    final title = manga['attributes']?['title']?['en'] ?? 'Không có tiêu đề';
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.0),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.grey.withAlpha(51),
-              blurRadius: 6.0,
-              offset: Offset(0, 2))
-        ],
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => MangaDetailScreen(mangaId: mangaId))),
-            child: Container(
-              width: 80,
-              height: 120,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4.0),
-                child: FutureBuilder<String>(
-                  future: _mangaDexService.fetchCoverUrl(mangaId),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData)
-                      return Image.network(snapshot.data!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Icon(Icons.broken_image));
-                    return Center(child: CircularProgressIndicator());
-                  },
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2),
-                SizedBox(height: 8),
-                FutureBuilder<List<dynamic>>(
-                  future: _mangaDexService.fetchChapters(mangaId, 'en,vi'),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData)
-                      return SizedBox(
-                          height: 50,
-                          child: Center(child: CircularProgressIndicator()));
-                    if (snapshot.hasError) return Text('Không thể tải chapter');
-                    if (snapshot.data!.isEmpty) return Text('Chưa có chương nào');
-                    var chapter = snapshot.data!.first;
-                    String chapterNumber =
-                        chapter['attributes']['chapter'] ?? 'N/A';
-                    String chapterTitle = chapter['attributes']['title'] ?? '';
-                    String displayTitle = chapterTitle.isEmpty
-                        ? 'Chương $chapterNumber'
-                        : 'Chương $chapterNumber: $chapterTitle';
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(displayTitle,
-                          style: TextStyle(fontSize: 13),
-                          overflow: TextOverflow.ellipsis),
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ChapterReaderScreen(
-                                  chapter: Chapter(
-                                      mangaId: mangaId,
-                                      chapterId: chapter['id'],
-                                      chapterName: displayTitle,
-                                      chapterList: snapshot.data!)))),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          if (isFollowing)
-            IconButton(
-              icon: Icon(Icons.remove_circle_outline, color: Colors.red),
-              onPressed: () => handleUnfollow(mangaId),
-            ),
-        ],
-      ),
-    );
-  }
+    final mangaMap = json.decode(mangaJson) as Map<String, dynamic>;
 
-  void dispose() {}
+    test('Manga.fromJson should correctly parse the JSON', () {
+      final manga = Manga.fromJson(mangaMap);
+
+      expect(manga.id, 'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6');
+      expect(manga.type, 'manga');
+      expect(manga.attributes, isA<MangaAttributes>());
+      expect(manga.attributes.title['en'], 'Test Manga');
+      expect(manga.relationships, isA<List<Relationship>>());
+      expect(manga.relationships.length, 2);
+      expect(manga.relationships[0].type, 'author');
+      expect(manga.relationships[1].type, 'cover_art');
+    });
+
+    test('Manga.toJson should correctly convert the object to JSON', () {
+      // Vì relationship trong json mẫu không có attributes, ta cần tạo 1 map tương ứng
+      final expectedJson = json.decode(mangaJson) as Map<String, dynamic>;
+      // `fromJson` của relationship sẽ thêm `attributes: null` nếu nó không có
+      (expectedJson['relationships'] as List<dynamic>).forEach((element) {
+        (element as Map<String, dynamic>)['attributes'] = null;
+      });
+
+      final manga = Manga.fromJson(mangaMap);
+      final resultJson = manga.toJson();
+
+      expect(resultJson, expectedJson);
+    });
+  });
 }
 ```
 
-### 2.4. Cập nhật `user_api_service.dart` (phần kiểm tra theo dõi)
-Có một lỗi nhỏ trong hàm `checkIfUserIsFollowing` khi parse JSON. Hãy sửa lại để đảm bảo nó hoạt động chính xác.
+### 3.6. Test cho `list_response.dart`
 
+Đây là một lớp generic, vì vậy chúng ta sẽ test nó với một kiểu cụ thể, ví dụ `Manga`.
+
+Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\list_response_test.dart`
+
+<!-- MangaReaderFrontend\test\data\models\manga\list_response_test.dart -->
 ```dart
-// MangaReaderFrontend/lib/data/services/user_api_service.dart
-  // ... (giữ nguyên các hàm khác)
-  
-  Future<bool> checkIfUserIsFollowing(String mangaId) async {
-    try {
-      final token = await SecureStorageService.getToken();
-      if (token == null) {
-        return false;
-      }
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/users/user/following/$mangaId'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (response.statusCode == 200) {
-        // Sửa lỗi parse JSON ở đây
-        final Map<String, dynamic> body = jsonDecode(response.body);
-        return body['isFollowing'] ?? false;
-      } else {
-        print('Error response status: ${response.statusCode}');
-        print('Error response body: ${response.body}');
-        throw Exception('Lỗi khi kiểm tra theo dõi: ${response.body}');
-      }
-    } catch (e) {
-      print("Error checking follow status: $e");
-      return false;
-    }
-  }
+import 'dart:convert';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader_app/data/models/manga/list_response.dart';
+import 'package:manga_reader_app/data/models/manga/manga.dart';
 
-  // ... (giữ nguyên các hàm khác)
+void main() {
+  group('ListResponse<T> Model Test', () {
+    const String mangaListResponseJson = '''
+    {
+      "result": "ok",
+      "response": "collection",
+      "data": [
+        {
+          "id": "manga-id-1",
+          "type": "manga",
+          "attributes": {
+            "title": { "en": "Manga 1" },
+            "altTitles": [],
+            "description": { "en": "Desc 1" },
+            "isLocked": false,
+            "originalLanguage": "ja",
+            "status": "ongoing",
+            "contentRating": "safe",
+            "chapterNumbersResetOnNewVolume": false,
+            "tags": [],
+            "state": "published",
+            "version": 1,
+            "createdAt": "2020-01-01T00:00:00.000Z",
+            "updatedAt": "2021-01-01T00:00:00.000Z"
+          },
+          "relationships": []
+        }
+      ],
+      "limit": 1,
+      "offset": 0,
+      "total": 100
+    }
+    ''';
+
+    final mangaListResponseMap =
+        json.decode(mangaListResponseJson) as Map<String, dynamic>;
+
+    test('ListResponse<Manga>.fromJson should correctly parse the JSON', () {
+      final response =
+          ListResponse<Manga>.fromJson(mangaListResponseMap, Manga.fromJson);
+
+      expect(response.result, 'ok');
+      expect(response.response, 'collection');
+      expect(response.limit, 1);
+      expect(response.offset, 0);
+      expect(response.total, 100);
+      expect(response.data, isA<List<Manga>>());
+      expect(response.data.length, 1);
+      expect(response.data.first.id, 'manga-id-1');
+      expect(response.data.first.attributes.title['en'], 'Manga 1');
+    });
+
+    test('ListResponse<Manga>.toJson should correctly convert the object to JSON', () {
+      final response = ListResponse<Manga>.fromJson(mangaListResponseMap, Manga.fromJson);
+      final resultJson = response.toJson((manga) => manga.toJson());
+      
+      expect(resultJson, mangaListResponseMap);
+    });
+  });
+}
 ```
 
-(Bạn có thể copy toàn bộ file `user_api_service.dart` ở mục 2.2 vì nó đã bao gồm sửa lỗi này).
+## 4. Chạy tất cả các Test
 
----
+Sau khi đã tạo tất cả các file test, bạn có thể chạy chúng từ cửa sổ Terminal trong Visual Studio Code hoặc terminal của hệ thống.
 
-## Bước 3: Dọn dẹp và Chạy lại
+Mở terminal và di chuyển đến thư mục gốc của dự án (`MangaReaderFrontend`), sau đó chạy lệnh sau:
 
-Sau khi đã chỉnh sửa các file cần thiết, hãy thực hiện các bước sau để đảm bảo mọi thứ hoạt động trơn tru.
+```bash
+flutter test
+```
 
-1.  **Dừng mọi tiến trình đang chạy** (cả server Node.js và ứng dụng Flutter).
-2.  Mở terminal trong thư mục `MangaReaderFrontend` và chạy:
-    ```bash
-    flutter clean
-    flutter pub get
-    ```
-3.  Mở terminal trong thư mục `MangaReaderBackend` và chạy lại server:
-    ```bash
-    npm run dev
-    ```
-4.  Chạy lại ứng dụng Flutter trên máy ảo hoặc thiết bị thật:
-    ```bash
-    flutter run
-    ```
+Lệnh này sẽ tự động tìm và chạy tất cả các file có đuôi `_test.dart` trong thư mục `test`. Nếu tất cả các test đều thành công, bạn sẽ thấy output tương tự như sau:
 
-Bây giờ, chức năng đăng nhập bằng Google của bạn sẽ hoạt động trở lại và tuân thủ các tiêu chuẩn bảo mật mới nhất của `google_sign_in` v7. Tất cả các lỗi bạn gặp phải sẽ được khắc phục.
+```
+00:02 +6: All tests passed!
+```
+
+Nếu có lỗi, terminal sẽ chỉ rõ test nào đã thất bại và lý do tại sao, giúp bạn dễ dàng sửa lỗi.
+
+## 5. Tổng kết
+
+Bằng cách thực hiện các bước trên, bạn đã xây dựng một bộ unit test vững chắc cho các model dữ liệu của mình. Điều này không chỉ đảm bảo code của bạn hoạt động đúng ở hiện tại mà còn giúp việc bảo trì và mở rộng ứng dụng trong tương lai trở nên dễ dàng và an toàn hơn.
 ```

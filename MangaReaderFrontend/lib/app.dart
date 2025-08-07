@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'features/main_navigation/view/main_navigation_screen.dart';
 
 class MangaReaderApp extends StatelessWidget {
+  const MangaReaderApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -13,9 +15,9 @@ class MangaReaderApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       initialRoute: '/',
-      routes: {
+      routes: <String, WidgetBuilder>{
         // Đặt MainNavigationScreen làm màn hình chính
-        '/': (context) => MainNavigationScreen(),
+        '/': (BuildContext context) => const MainNavigationScreen(),
       },
     );
   }
