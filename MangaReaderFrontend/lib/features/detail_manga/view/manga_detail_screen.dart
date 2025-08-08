@@ -5,7 +5,9 @@ import '../../../data/models/manga/relationship.dart';
 import '../../../data/models/manga/tag.dart';
 import '../../chapter_reader/view/chapter_reader_screen.dart';
 import '../logic/manga_detail_logic.dart';
+import '../../../utils/manga_helper.dart';
 
+/// Màn hình hiển thị chi tiết một Manga.
 class MangaDetailScreen extends StatefulWidget {
   final String mangaId;
   const MangaDetailScreen({super.key, required this.mangaId});
@@ -62,11 +64,38 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
     );
   }
 
+  Widget _buildCoverImage(Manga manga) {
+    String? coverFileName;
+    try {
+      final Relationship coverArtRelationship =
+      manga.relationships.firstWhere((rel) => rel.type == 'cover_art');
+      if (coverArtRelationship.attributes != null) {
+        coverFileName =
+        coverArtRelationship.attributes!['fileName'] as String?;
+      }
+    } catch (e) {
+      coverFileName = null;
+    }
+
+    return SizedBox(
+      width: MediaQuery.of(context).size.width / 3,
+      height: 150,
+      child: coverFileName != null
+          ? Image.network(
+        'https://uploads.mangadex.org/covers/${manga.id}/$coverFileName.512.jpg',
+        fit: BoxFit.contain,
+        errorBuilder:
+            (BuildContext context, Object error, StackTrace? stackTrace) =>
+        const Icon(Icons.broken_image, size: 100),
+      )
+          : const Icon(Icons.broken_image, size: 100),
+    );
+  }
+
   Widget _buildContent(Manga details) {
     final Manga manga = details;
-    final String title = manga.attributes.title['en'] ?? 'Không có tiêu đề';
-    final String description =
-        manga.attributes.description['en'] ?? 'Không có mô tả';
+    final String title = manga.getDisplayTitle();
+    final String description = manga.getDisplayDescription();
 
     return Column(
       children: <Widget>[
@@ -75,34 +104,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              FutureBuilder<String>(
-                future: _logic.coverUrl,
-                builder:
-                    (
-                      BuildContext context,
-                      AsyncSnapshot<String> coverSnapshot,
-                    ) {
-                      if (coverSnapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return SizedBox(
-                          width: MediaQuery.of(context).size.width / 3,
-                          height: 150,
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      } else if (coverSnapshot.hasError) {
-                        return const Icon(Icons.broken_image, size: 100);
-                      } else {
-                        return Image.network(
-                          coverSnapshot.data!,
-                          width: MediaQuery.of(context).size.width / 3,
-                          height: 150,
-                          fit: BoxFit.cover,
-                        );
-                      }
-                    },
-              ),
+              _buildCoverImage(manga),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -151,11 +153,11 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
 
     final String authorNames = authors.isNotEmpty
         ? authors
-              .map(
-                (Relationship author) =>
-                    (author.attributes?['name'] as String?) ?? 'Không rõ',
-              )
-              .join(', ')
+        .map(
+          (Relationship author) =>
+      (author.attributes?['name'] as String?) ?? 'Không rõ',
+    )
+        .join(', ')
         : 'Không rõ';
 
     showDialog(
@@ -222,11 +224,11 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
         } else {
           final List<dynamic> chapterList = snapshot.data!;
           final Map<String, List<dynamic>> chaptersByLanguage =
-              <String, List<dynamic>>{};
+          <String, List<dynamic>>{};
           for (final dynamic chapter in chapterList) {
             final String lang =
                 (chapter['attributes']['translatedLanguage'] as String?) ??
-                'Unknown';
+                    'Unknown';
             chaptersByLanguage
                 .putIfAbsent(lang, () => <dynamic>[])
                 .add(chapter);
@@ -234,21 +236,21 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
 
           return ListView(
             children: chaptersByLanguage.entries.map((
-              MapEntry<String, List<dynamic>> langEntry,
-            ) {
+                MapEntry<String, List<dynamic>> langEntry,
+                ) {
               final String language = langEntry.key;
               final List<dynamic> languageChapters = langEntry.value;
               return ExpansionTile(
                 title: Text('Ngôn ngữ: ${language.toUpperCase()}'),
                 children: languageChapters.map<Widget>((dynamic chapter) {
                   final Map<String, dynamic> attributes =
-                      chapter['attributes'] as Map<String, dynamic>;
+                  chapter['attributes'] as Map<String, dynamic>;
                   final String chapterTitle =
                       (attributes['title'] as String?) ?? '';
                   final String chapterNumber =
                       (attributes['chapter'] as String?) ?? 'N/A';
                   final String displayTitle =
-                      chapterTitle.isEmpty || chapterTitle == chapterNumber
+                  chapterTitle.isEmpty || chapterTitle == chapterNumber
                       ? 'Chương $chapterNumber'
                       : 'Chương $chapterNumber: $chapterTitle';
 

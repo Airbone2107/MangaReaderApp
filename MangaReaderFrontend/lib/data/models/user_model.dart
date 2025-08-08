@@ -1,61 +1,36 @@
-// lib/data/models/user_model.dart
-class User {
-  final String id;
-  final String googleId;
-  final String email;
-  final String displayName;
-  final String? photoURL;
-  final List<String> following;
-  final List<ReadingProgress> readingProgress;
-  final DateTime createdAt;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  User({
-    required this.id,
-    required this.googleId,
-    required this.email,
-    required this.displayName,
-    this.photoURL,
-    required this.following,
-    required this.readingProgress,
-    required this.createdAt,
-  });
+part 'user_model.freezed.dart';
+part 'user_model.g.dart';
 
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['_id'] as String? ?? '',
-      googleId: json['googleId'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      displayName: json['displayName'] as String? ?? '',
-      photoURL: json['photoURL'] as String?,
-      following: List<String>.from(
-          (json['followingManga'] as List<dynamic>?) ?? <String>[]),
-      readingProgress: ((json['readingManga'] as List<dynamic>?) ?? <dynamic>[])
-          .map((dynamic x) =>
-              ReadingProgress.fromJson(x as Map<String, dynamic>))
-          .toList(),
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-          DateTime.now(),
-    );
-  }
+/// Mô hình dữ liệu người dùng.
+@freezed
+abstract class User with _$User {
+  const factory User({
+    @JsonKey(name: '_id') required String id,
+    required String googleId,
+    required String email,
+    required String displayName,
+    String? photoURL,
+    @JsonKey(name: 'followingManga') required List<String> following,
+    @JsonKey(name: 'readingManga')
+    required List<ReadingProgress> readingProgress,
+    required DateTime createdAt,
+  }) = _User;
+
+  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
 }
 
-class ReadingProgress {
-  final String mangaId;
-  final String lastChapter;
-  final DateTime lastReadAt;
+/// Tiến độ đọc của người dùng đối với một manga.
+@freezed
+abstract class ReadingProgress with _$ReadingProgress {
+  const factory ReadingProgress({
+    required String mangaId,
+    required String lastChapter,
+    required DateTime lastReadAt,
+    @JsonKey(name: '_id') String? id,
+  }) = _ReadingProgress;
 
-  ReadingProgress({
-    required this.mangaId,
-    required this.lastChapter,
-    required this.lastReadAt,
-  });
-
-  factory ReadingProgress.fromJson(Map<String, dynamic> json) {
-    return ReadingProgress(
-      mangaId: json['mangaId'] as String? ?? '',
-      lastChapter: json['lastChapter'] as String? ?? '',
-      lastReadAt: DateTime.tryParse(json['lastReadAt'] as String? ?? '') ??
-          DateTime.now(),
-    );
-  }
+  factory ReadingProgress.fromJson(Map<String, dynamic> json) =>
+      _$ReadingProgressFromJson(json);
 }

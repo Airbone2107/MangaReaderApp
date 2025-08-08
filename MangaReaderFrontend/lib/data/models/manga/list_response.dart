@@ -3,6 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'list_response.freezed.dart';
 part 'list_response.g.dart';
 
+/// Mẫu phản hồi danh sách từ MangaDex có kiểu tổng quát `T`.
 @Freezed(genericArgumentFactories: true)
 abstract class ListResponse<T> with _$ListResponse<T> {
   const factory ListResponse({
@@ -15,8 +16,7 @@ abstract class ListResponse<T> with _$ListResponse<T> {
   }) = _ListResponse<T>;
 
   factory ListResponse.fromJson(
-      Map<String, dynamic> json,
-      T Function(Object? json) fromJsonT,
-      ) =>
-      _$ListResponseFromJson<T>(json, fromJsonT);
+    Map<String, dynamic> json,
+    T Function(Object? json) fromJsonT,
+  ) => _$ListResponseFromJson<T>(json, fromJsonT);
 }

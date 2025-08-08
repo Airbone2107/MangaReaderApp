@@ -1,9 +1,9 @@
-// lib/features/main_navigation/view/main_navigation_screen.dart
 import 'package:flutter/material.dart';
 import '../../account/view/account_screen.dart';
 import '../../home/view/home_screen.dart';
 import '../../search/view/manga_search_screen.dart';
 
+/// Màn hình điều hướng chính với 3 tab: Trang chủ, Tìm kiếm, Tài khoản.
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -50,14 +50,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         currentIndex: _selectedIndex,
         onTap: _onTabTapped,
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Trang Chủ',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Tìm Kiếm',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang Chủ'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Tìm Kiếm'),
           BottomNavigationBarItem(
             icon: Icon(Icons.account_circle),
             label: 'Tài Khoản',

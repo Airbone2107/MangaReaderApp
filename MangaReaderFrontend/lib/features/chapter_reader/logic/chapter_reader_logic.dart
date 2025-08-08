@@ -6,6 +6,10 @@ import '../../../data/storage/secure_storage_service.dart';
 import '../../../utils/logger.dart';
 import '../view/chapter_reader_screen.dart';
 
+/// Nghiệp vụ cho màn hình đọc chapter.
+///
+/// Xử lý ẩn/hiện thanh điều hướng khi cuộn, điều hướng giữa các chapter,
+/// theo dõi trạng thái theo dõi và cập nhật tiến độ đọc.
 class ChapterReaderLogic {
   final Function(VoidCallback) setState;
   final UserApiService userService;
@@ -24,6 +28,7 @@ class ChapterReaderLogic {
     scrollController.addListener(_onScroll);
   }
 
+  /// Lắng nghe sự kiện cuộn để quyết định ẩn/hiện thanh điều hướng.
   void _onScroll() {
     final double currentOffset = scrollController.offset;
     final double delta = currentOffset - lastOffset;
@@ -38,12 +43,14 @@ class ChapterReaderLogic {
     }
   }
 
+  /// Vị trí index của chapter hiện tại trong `chapter.chapterList`.
   int getCurrentIndex(Chapter chapter) {
     return chapter.chapterList.indexWhere(
       (dynamic ch) => ch['id'] == chapter.chapterId,
     );
   }
 
+  /// Tạo tên hiển thị cho chapter dựa trên số và tiêu đề.
   String getChapterDisplayName(Map<String, dynamic> chapter) {
     final String chapterNumber =
         chapter['attributes']['chapter'] as String? ?? 'N/A';
@@ -53,10 +60,12 @@ class ChapterReaderLogic {
         : 'Chương $chapterNumber: $chapterTitle';
   }
 
+  /// Tải danh sách URL trang ảnh của chapter.
   Future<List<String>> fetchChapterPages(String chapterId) {
     return mangaDexService.fetchChapterPages(chapterId);
   }
 
+  /// Điều hướng tới chapter kế tiếp (nếu có).
   void goToNextChapter(
     BuildContext context,
     Chapter chapter,
@@ -72,6 +81,7 @@ class ChapterReaderLogic {
     }
   }
 
+  /// Điều hướng tới chapter trước đó (nếu có).
   void goToPreviousChapter(
     BuildContext context,
     Chapter chapter,
@@ -87,6 +97,7 @@ class ChapterReaderLogic {
     }
   }
 
+  /// Thay thế màn hình hiện tại bằng chapter mới.
   void _navigateToChapter(
     BuildContext context,
     Chapter currentChapter,
@@ -107,6 +118,7 @@ class ChapterReaderLogic {
     );
   }
 
+  /// Thêm manga vào danh sách theo dõi nếu đã đăng nhập.
   Future<void> followManga(BuildContext context, String mangaId) async {
     try {
       final String? token = await SecureStorageService.getToken();
@@ -137,6 +149,7 @@ class ChapterReaderLogic {
     }
   }
 
+  /// Bỏ theo dõi manga nếu đã đăng nhập.
   Future<void> removeFromFollowing(BuildContext context, String mangaId) async {
     try {
       final String? token = await SecureStorageService.getToken();
@@ -165,6 +178,7 @@ class ChapterReaderLogic {
     }
   }
 
+  /// Kiểm tra trạng thái theo dõi.
   Future<bool> isFollowingManga(String mangaId) async {
     try {
       final String? token = await SecureStorageService.getToken();
@@ -178,6 +192,7 @@ class ChapterReaderLogic {
     }
   }
 
+  /// Cập nhật tiến độ đọc lên backend nếu có token.
   Future<void> updateProgress(String mangaId, String chapterId) async {
     try {
       final String? token = await SecureStorageService.getToken();
@@ -189,6 +204,7 @@ class ChapterReaderLogic {
     }
   }
 
+  /// Hủy lắng nghe cuộn để tránh rò rỉ tài nguyên.
   void dispose() {
     scrollController.removeListener(_onScroll);
   }

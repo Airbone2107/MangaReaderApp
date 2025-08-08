@@ -4,15 +4,16 @@ import 'tag.dart';
 part 'manga_attributes.freezed.dart';
 part 'manga_attributes.g.dart';
 
+/// Thuộc tính chi tiết của một Manga.
 @freezed
 abstract class MangaAttributes with _$MangaAttributes {
   @JsonSerializable(
     explicitToJson: true,
-    includeIfNull: false, // Thêm dòng này
+    includeIfNull: false,
   )
   const factory MangaAttributes({
     required Map<String, String> title,
-    required List<Map<String, String>> altTitles,
+    required List<dynamic> altTitles,
     required Map<String, String> description,
     required bool isLocked,
     Map<String, String>? links,

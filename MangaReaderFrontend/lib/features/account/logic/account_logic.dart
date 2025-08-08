@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:manga_reader_app/config/language_config.dart';
 import 'package:manga_reader_app/data/models/manga/manga.dart';
+import 'package:manga_reader_app/data/models/manga/relationship.dart';
 import '../../../config/google_signin_config.dart';
 import '../../../data/models/chapter_model.dart';
 import '../../../data/models/user_model.dart';
@@ -9,9 +11,14 @@ import '../../../data/services/mangadex_api_service.dart';
 import '../../../data/services/user_api_service.dart';
 import '../../../data/storage/secure_storage_service.dart';
 import '../../../utils/logger.dart';
+import '../../../utils/manga_helper.dart';
 import '../../chapter_reader/view/chapter_reader_screen.dart';
 import '../../detail_manga/view/manga_detail_screen.dart';
 
+/// Lớp nghiệp vụ cho màn hình tài khoản.
+///
+/// Quản lý đăng nhập/đăng xuất, tải dữ liệu user, hiển thị danh sách theo dõi
+/// và lịch sử đọc, cùng các tương tác liên quan.
 class AccountScreenLogic {
   final MangaDexApiService _mangaDexService = MangaDexApiService();
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -26,12 +33,14 @@ class AccountScreenLogic {
   late BuildContext context;
   late VoidCallback refreshUI;
 
+  /// Khởi tạo context và hàm cập nhật UI, sau đó tải dữ liệu người dùng.
   Future<void> init(BuildContext context, VoidCallback refreshUI) async {
     this.context = context;
     this.refreshUI = refreshUI;
     await _loadUser();
   }
 
+  /// Tải thông tin người dùng từ backend nếu có token hợp lệ.
   Future<void> _loadUser() async {
     isLoading = true;
     refreshUI();
@@ -45,8 +54,8 @@ class AccountScreenLogic {
     } catch (e, s) {
       user = null;
       if (e is HttpException && e.message == '403') {
-        logger.w('Token không hợp lệ, buộc đăng xuất.');
-        await handleSignOut(); // Token is invalid, force sign out
+          logger.w('Token không hợp lệ, buộc đăng xuất.');
+          await handleSignOut();
       }
       logger.e('Lỗi khi tải người dùng', error: e, stackTrace: s);
     } finally {
@@ -55,6 +64,7 @@ class AccountScreenLogic {
     }
   }
 
+  /// Xử lý đăng nhập Google và đồng bộ dữ liệu người dùng.
   Future<void> handleSignIn() async {
     isLoading = true;
     refreshUI();
@@ -79,6 +89,7 @@ class AccountScreenLogic {
     }
   }
 
+  /// Xử lý đăng xuất và dọn dẹp token.
   Future<void> handleSignOut() async {
     try {
       await _googleSignIn.signOut();
@@ -94,14 +105,17 @@ class AccountScreenLogic {
     }
   }
 
+  /// Làm mới dữ liệu người dùng.
   Future<void> refreshUserData() async {
     await _loadUser();
   }
 
+  /// Gọi service lấy dữ liệu người dùng.
   Future<User> _fetchUserData() async {
     return _userService.getUserData();
   }
 
+  /// Bỏ theo dõi một manga và cập nhật giao diện.
   Future<void> handleUnfollow(String mangaId) async {
     try {
       if (user == null) {
@@ -129,6 +143,7 @@ class AccountScreenLogic {
     }
   }
 
+  /// Lấy thông tin các manga dựa trên danh sách `mangaIds` và cache kết quả.
   Future<List<Manga>> _getMangaListInfo(List<String> mangaIds) async {
     try {
       final List<Manga> mangas = await _mangaDexService.fetchMangaByIds(
@@ -148,6 +163,7 @@ class AccountScreenLogic {
     }
   }
 
+  /// Xây dựng danh sách manga theo tiêu đề và id.
   Widget buildMangaListView(
     String title,
     List<String> mangaIds, {
@@ -229,13 +245,14 @@ class AccountScreenLogic {
     );
   }
 
+  /// Xây dựng một item hiển thị manga.
   Widget _buildMangaListItem(
     Manga manga, {
     bool isFollowing = false,
     required String mangaId,
     String? lastReadChapter,
   }) {
-    final String title = manga.attributes.title['en'] ?? 'Không có tiêu đề';
+    final String title = manga.getDisplayTitle();
     return Container(
       padding: const EdgeInsets.all(12.0),
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -265,25 +282,7 @@ class AccountScreenLogic {
               height: 120,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(4.0),
-                child: FutureBuilder<String>(
-                  future: _mangaDexService.fetchCoverUrl(mangaId),
-                  builder:
-                      (BuildContext context, AsyncSnapshot<String> snapshot) {
-                        if (snapshot.hasData) {
-                          return Image.network(
-                            snapshot.data!,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (
-                                  BuildContext context,
-                                  Object error,
-                                  StackTrace? stackTrace,
-                                ) => const Icon(Icons.broken_image),
-                          );
-                        }
-                        return const Center(child: CircularProgressIndicator());
-                      },
-                ),
+                child: _buildCoverImage(manga),
               ),
             ),
           ),
@@ -303,7 +302,10 @@ class AccountScreenLogic {
                 ),
                 const SizedBox(height: 8),
                 FutureBuilder<List<dynamic>>(
-                  future: _mangaDexService.fetchChapters(mangaId, 'en,vi'),
+                  future: _mangaDexService.fetchChapters(
+                    mangaId,
+                    LanguageConfig.preferredLanguages,
+                  ),
                   builder:
                       (
                         BuildContext context,
@@ -369,5 +371,34 @@ class AccountScreenLogic {
     );
   }
 
+  /// Dựng widget ảnh bìa cho manga.
+  Widget _buildCoverImage(Manga manga) {
+    String? coverFileName;
+    try {
+      final Relationship coverArtRelationship = manga.relationships.firstWhere(
+        (rel) => rel.type == 'cover_art',
+      );
+      if (coverArtRelationship.attributes != null) {
+        coverFileName = coverArtRelationship.attributes!['fileName'] as String?;
+      }
+    } catch (e) {
+      coverFileName = null;
+    }
+
+    if (coverFileName != null) {
+      final String imageUrl =
+          'https://uploads.mangadex.org/covers/${manga.id}/$coverFileName.512.jpg';
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder:
+            (BuildContext context, Object error, StackTrace? stackTrace) =>
+                const Icon(Icons.broken_image),
+      );
+    }
+    return const Icon(Icons.broken_image);
+  }
+
+  /// Giải phóng tài nguyên nếu cần.
   void dispose() {}
 }

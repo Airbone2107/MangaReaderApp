@@ -5,6 +5,7 @@ import '../../../data/models/chapter_model.dart';
 import '../../../data/services/user_api_service.dart';
 import '../logic/chapter_reader_logic.dart';
 
+/// Màn hình đọc chapter, hiển thị danh sách ảnh và các điều khiển.
 class ChapterReaderScreen extends StatefulWidget {
   final Chapter chapter;
   const ChapterReaderScreen({super.key, required this.chapter});
@@ -38,8 +39,9 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
   }
 
   Future<void> _checkFollowingStatus() async {
-    final bool followingStatus =
-        await _logic.isFollowingManga(widget.chapter.mangaId);
+    final bool followingStatus = await _logic.isFollowingManga(
+      widget.chapter.mangaId,
+    );
     if (mounted) {
       setState(() {
         _isFollowing = followingStatus;
@@ -66,35 +68,40 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
               future: _chapterPages,
               builder:
                   (BuildContext context, AsyncSnapshot<List<String>> snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Lỗi:  ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Không có trang nào.'));
-                }
-                return ListView.builder(
-                  controller: _scrollController,
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return CachedNetworkImage(
-                      imageUrl: snapshot.data![index],
-                      fit: BoxFit.fitWidth,
-                      placeholder: (BuildContext context, String url) =>
-                          const SizedBox(
-                        height: 300,
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget:
-                          (BuildContext context, String url, Object error) =>
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Lỗi:  ${snapshot.error}'));
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text('Không có trang nào.'));
+                    }
+                    return ListView.builder(
+                      controller: _scrollController,
+                      itemCount: snapshot.data!.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        return CachedNetworkImage(
+                          imageUrl: snapshot.data![index],
+                          fit: BoxFit.fitWidth,
+                          placeholder: (BuildContext context, String url) =>
                               const SizedBox(
-                        height: 300,
-                        child: Center(child: Icon(Icons.error)),
-                      ),
+                                height: 300,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                          errorWidget:
+                              (
+                                BuildContext context,
+                                String url,
+                                Object error,
+                              ) => const SizedBox(
+                                height: 300,
+                                child: Center(child: Icon(Icons.error)),
+                              ),
+                        );
+                      },
                     );
                   },
-                );
-              },
             ),
             if (_logic.areBarsVisible) _buildOverlay(context),
           ],
@@ -150,7 +157,10 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
           IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => _logic.goToPreviousChapter(
-                context, widget.chapter, currentIndex),
+              context,
+              widget.chapter,
+              currentIndex,
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white),
@@ -159,7 +169,10 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
           IconButton(
             icon: const Icon(Icons.home, color: Colors.white),
             onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                context, '/', (Route<dynamic> route) => false),
+              context,
+              '/',
+              (Route<dynamic> route) => false,
+            ),
           ),
           IconButton(
             icon: Icon(
@@ -169,7 +182,9 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
             onPressed: () async {
               if (_isFollowing) {
                 await _logic.removeFromFollowing(
-                    context, widget.chapter.mangaId);
+                  context,
+                  widget.chapter.mangaId,
+                );
               } else {
                 await _logic.followManga(context, widget.chapter.mangaId);
               }

@@ -1,16 +1,24 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../utils/logger.dart';
-import '../models/manga/cover.dart';
 import '../models/manga/list_response.dart';
 import '../models/manga/manga.dart';
 import '../models/manga/tag.dart';
 import '../models/sort_manga_model.dart';
 
+/// Service gọi API MangaDex.
+///
+/// Cung cấp các phương thức lấy danh sách manga, chi tiết manga, danh sách chapter,
+/// trang ảnh chapter, danh sách tags và lấy manga theo danh sách id.
 class MangaDexApiService {
   final String baseUrl = 'https://api.mangadex.org';
+  final http.Client _client;
 
-  // Ghi log lỗi với thông tin chi tiết
+  /// Khởi tạo service với khả năng truyền vào `http.Client` tùy biến.
+  /// Nếu không truyền, sẽ tạo `http.Client` mặc định.
+  MangaDexApiService({http.Client? client}) : _client = client ?? http.Client();
+
+  /// Ghi log lỗi với thông tin chi tiết phản hồi từ API.
   void logError(String functionName, http.Response response) {
     logger.e(
       'Lỗi trong hàm $functionName',
@@ -19,13 +27,16 @@ class MangaDexApiService {
     );
   }
 
+  /// Lấy danh sách manga theo điều kiện sắp xếp, phân trang.
   Future<List<Manga>> fetchManga({
     int? limit,
     int? offset,
     SortManga? sortManga,
   }) async {
     final Map<String, dynamic> params = <String, dynamic>{
-      'includes[]': 'cover_art', // Luôn lấy cover art
+      'includes[]': 'cover_art',
+      'hasAvailableChapters': '1',
+      'hasUnavailableChapters': '0',
     };
 
     if (limit != null) {
@@ -42,14 +53,14 @@ class MangaDexApiService {
     final Uri uri = Uri.parse(
       '$baseUrl/manga',
     ).replace(queryParameters: params);
-    final http.Response response = await http.get(uri);
+    final http.Response response = await _client.get(uri);
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      jsonDecode(response.body) as Map<String, dynamic>;
       final listResponse = ListResponse<Manga>.fromJson(
         data,
-        (json) => Manga.fromJson(json as Map<String, dynamic>),
+            (json) => Manga.fromJson(json as Map<String, dynamic>),
       );
       return listResponse.data;
     } else if (response.statusCode == 503) {
@@ -62,16 +73,19 @@ class MangaDexApiService {
     }
   }
 
+  /// Lấy chi tiết một manga theo `mangaId`.
   Future<Manga> fetchMangaDetails(String mangaId) async {
-    final Map<String, String> params = <String, String>{'includes[]': 'author'};
+    final Map<String, dynamic> params = <String, dynamic>{
+      'includes[]': ['author', 'cover_art']
+    };
     final Uri uri = Uri.parse(
       '$baseUrl/manga/$mangaId',
     ).replace(queryParameters: params);
-    final http.Response response = await http.get(uri);
+    final http.Response response = await _client.get(uri);
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      jsonDecode(response.body) as Map<String, dynamic>;
       return Manga.fromJson(data['data'] as Map<String, dynamic>);
     } else {
       logError('fetchMangaDetails', response);
@@ -79,21 +93,19 @@ class MangaDexApiService {
     }
   }
 
+  /// Lấy danh sách các chapter của một manga theo ngôn ngữ, thứ tự, và giới hạn tối đa.
   Future<List<dynamic>> fetchChapters(
     String mangaId,
-    String languages, {
+    List<String> languages, {
     String order = 'desc',
     int? maxChapters,
   }) async {
-    final List<String> languageList = languages
-        .split(',')
-        .map((String lang) => lang.trim())
-        .toList();
-    languageList.removeWhere(
+    final List<String> validLanguages = List<String>.from(languages);
+    validLanguages.removeWhere(
       (String lang) => !RegExp(r'^[a-z]{2}(-[a-z]{2})?$').hasMatch(lang),
     );
 
-    if (languageList.isEmpty) {
+    if (validLanguages.isEmpty) {
       throw Exception(
         'Danh sách ngôn ngữ không hợp lệ. Vui lòng kiểm tra cài đặt.',
       );
@@ -104,11 +116,16 @@ class MangaDexApiService {
     const int limit = 100;
 
     while (true) {
-      final http.Response response = await http.get(
-        Uri.parse(
-          '$baseUrl/manga/$mangaId/feed?limit=$limit&offset=$offset&translatedLanguage[]=${languageList.join('&translatedLanguage[]=')}&order[chapter]=$order',
-        ),
-      );
+      final Map<String, dynamic> queryParameters = <String, dynamic>{
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+        'order[chapter]': order,
+        'translatedLanguage[]': validLanguages,
+      };
+
+      final Uri uri = Uri.parse('$baseUrl/manga/$mangaId/feed')
+          .replace(queryParameters: queryParameters);
+      final http.Response response = await _client.get(uri);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data =
@@ -141,42 +158,15 @@ class MangaDexApiService {
     return allChapters;
   }
 
-  Future<String> fetchCoverUrl(String mangaId) async {
-    final Uri uri = Uri.parse(
-      '$baseUrl/cover',
-    ).replace(queryParameters: <String, String>{'manga[]': mangaId});
-    final http.Response response = await http.get(uri);
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data =
-          jsonDecode(response.body) as Map<String, dynamic>;
-      final listResponse = ListResponse<Cover>.fromJson(
-        data,
-        (json) => Cover.fromJson(json as Map<String, dynamic>),
-      );
-
-      if (listResponse.data.isNotEmpty) {
-        final String coverFileName =
-            listResponse.data.first.attributes.fileName;
-        return 'https://uploads.mangadex.org/covers/$mangaId/$coverFileName.512.jpg';
-      } else {
-        // Trả về một URL ảnh bìa mặc định hoặc ném lỗi rõ ràng hơn
-        throw Exception('Không tìm thấy ảnh bìa cho manga $mangaId');
-      }
-    } else {
-      logError('fetchCoverUrl', response);
-      throw Exception('Lỗi khi tải ảnh bìa');
-    }
-  }
-
+  /// Lấy danh sách URL trang ảnh của một chapter.
   Future<List<String>> fetchChapterPages(String chapterId) async {
-    final http.Response response = await http.get(
+    final http.Response response = await _client.get(
       Uri.parse('$baseUrl/at-home/server/$chapterId'),
     );
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      jsonDecode(response.body) as Map<String, dynamic>;
       final List<String> pages = List<String>.from(
         data['chapter']['data'] as List<dynamic>,
       );
@@ -191,17 +181,18 @@ class MangaDexApiService {
     }
   }
 
+  /// Lấy toàn bộ danh sách tags của MangaDex.
   Future<List<Tag>> fetchTags() async {
-    final http.Response response = await http.get(
+    final http.Response response = await _client.get(
       Uri.parse('$baseUrl/manga/tag'),
     );
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      jsonDecode(response.body) as Map<String, dynamic>;
       final listResponse = ListResponse<Tag>.fromJson(
         data,
-        (json) => Tag.fromJson(json as Map<String, dynamic>),
+            (json) => Tag.fromJson(json as Map<String, dynamic>),
       );
       return listResponse.data;
     } else {
@@ -210,6 +201,7 @@ class MangaDexApiService {
     }
   }
 
+  /// Lấy thông tin nhiều manga theo danh sách `mangaIds`.
   Future<List<Manga>> fetchMangaByIds(List<String> mangaIds) async {
     if (mangaIds.isEmpty) {
       return <Manga>[];
@@ -218,20 +210,22 @@ class MangaDexApiService {
     final queryParameters = <String, dynamic>{
       'ids[]': mangaIds,
       'includes[]': 'cover_art',
+      'hasAvailableChapters': '1',
+      'hasUnavailableChapters': '0',
     };
     final Uri url = Uri.parse(
       '$baseUrl/manga',
     ).replace(queryParameters: queryParameters);
 
     try {
-      final http.Response response = await http.get(url);
+      final http.Response response = await _client.get(url);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data =
-            jsonDecode(response.body) as Map<String, dynamic>;
+        jsonDecode(response.body) as Map<String, dynamic>;
         final listResponse = ListResponse<Manga>.fromJson(
           data,
-          (json) => Manga.fromJson(json as Map<String, dynamic>),
+              (json) => Manga.fromJson(json as Map<String, dynamic>),
         );
         return listResponse.data;
       } else {

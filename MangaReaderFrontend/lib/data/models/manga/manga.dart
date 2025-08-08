@@ -5,6 +5,7 @@ import 'manga_attributes.dart';
 part 'manga.freezed.dart';
 part 'manga.g.dart';
 
+/// Mô hình dữ liệu Manga cơ bản từ MangaDex.
 @freezed
 abstract class Manga with _$Manga {
   const factory Manga({

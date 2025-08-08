@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MangaAttributes {
 
- Map<String, String> get title; List<Map<String, String>> get altTitles; Map<String, String> get description; bool get isLocked; Map<String, String>? get links; String get originalLanguage; String? get lastVolume; String? get lastChapter; String? get publicationDemographic; String? get status; int? get year; String? get contentRating; bool get chapterNumbersResetOnNewVolume; List<String>? get availableTranslatedLanguages; String? get latestUploadedChapter; List<Tag> get tags; String get state; int get version; DateTime get createdAt; DateTime get updatedAt;
+ Map<String, String> get title; List<dynamic> get altTitles; Map<String, String> get description; bool get isLocked; Map<String, String>? get links; String get originalLanguage; String? get lastVolume; String? get lastChapter; String? get publicationDemographic; String? get status; int? get year; String? get contentRating; bool get chapterNumbersResetOnNewVolume; List<String>? get availableTranslatedLanguages; String? get latestUploadedChapter; List<Tag> get tags; String get state; int get version; DateTime get createdAt; DateTime get updatedAt;
 /// Create a copy of MangaAttributes
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $MangaAttributesCopyWith<$Res>  {
   factory $MangaAttributesCopyWith(MangaAttributes value, $Res Function(MangaAttributes) _then) = _$MangaAttributesCopyWithImpl;
 @useResult
 $Res call({
- Map<String, String> title, List<Map<String, String>> altTitles, Map<String, String> description, bool isLocked, Map<String, String>? links, String originalLanguage, String? lastVolume, String? lastChapter, String? publicationDemographic, String? status, int? year, String? contentRating, bool chapterNumbersResetOnNewVolume, List<String>? availableTranslatedLanguages, String? latestUploadedChapter, List<Tag> tags, String state, int version, DateTime createdAt, DateTime updatedAt
+ Map<String, String> title, List<dynamic> altTitles, Map<String, String> description, bool isLocked, Map<String, String>? links, String originalLanguage, String? lastVolume, String? lastChapter, String? publicationDemographic, String? status, int? year, String? contentRating, bool chapterNumbersResetOnNewVolume, List<String>? availableTranslatedLanguages, String? latestUploadedChapter, List<Tag> tags, String state, int version, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -69,7 +69,7 @@ class _$MangaAttributesCopyWithImpl<$Res>
   return _then(_self.copyWith(
 title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,altTitles: null == altTitles ? _self.altTitles : altTitles // ignore: cast_nullable_to_non_nullable
-as List<Map<String, String>>,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as List<dynamic>,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,isLocked: null == isLocked ? _self.isLocked : isLocked // ignore: cast_nullable_to_non_nullable
 as bool,links: freezed == links ? _self.links : links // ignore: cast_nullable_to_non_nullable
 as Map<String, String>?,originalLanguage: null == originalLanguage ? _self.originalLanguage : originalLanguage // ignore: cast_nullable_to_non_nullable
@@ -172,7 +172,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Map<String, String> title,  List<Map<String, String>> altTitles,  Map<String, String> description,  bool isLocked,  Map<String, String>? links,  String originalLanguage,  String? lastVolume,  String? lastChapter,  String? publicationDemographic,  String? status,  int? year,  String? contentRating,  bool chapterNumbersResetOnNewVolume,  List<String>? availableTranslatedLanguages,  String? latestUploadedChapter,  List<Tag> tags,  String state,  int version,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Map<String, String> title,  List<dynamic> altTitles,  Map<String, String> description,  bool isLocked,  Map<String, String>? links,  String originalLanguage,  String? lastVolume,  String? lastChapter,  String? publicationDemographic,  String? status,  int? year,  String? contentRating,  bool chapterNumbersResetOnNewVolume,  List<String>? availableTranslatedLanguages,  String? latestUploadedChapter,  List<Tag> tags,  String state,  int version,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MangaAttributes() when $default != null:
 return $default(_that.title,_that.altTitles,_that.description,_that.isLocked,_that.links,_that.originalLanguage,_that.lastVolume,_that.lastChapter,_that.publicationDemographic,_that.status,_that.year,_that.contentRating,_that.chapterNumbersResetOnNewVolume,_that.availableTranslatedLanguages,_that.latestUploadedChapter,_that.tags,_that.state,_that.version,_that.createdAt,_that.updatedAt);case _:
@@ -193,7 +193,7 @@ return $default(_that.title,_that.altTitles,_that.description,_that.isLocked,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Map<String, String> title,  List<Map<String, String>> altTitles,  Map<String, String> description,  bool isLocked,  Map<String, String>? links,  String originalLanguage,  String? lastVolume,  String? lastChapter,  String? publicationDemographic,  String? status,  int? year,  String? contentRating,  bool chapterNumbersResetOnNewVolume,  List<String>? availableTranslatedLanguages,  String? latestUploadedChapter,  List<Tag> tags,  String state,  int version,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Map<String, String> title,  List<dynamic> altTitles,  Map<String, String> description,  bool isLocked,  Map<String, String>? links,  String originalLanguage,  String? lastVolume,  String? lastChapter,  String? publicationDemographic,  String? status,  int? year,  String? contentRating,  bool chapterNumbersResetOnNewVolume,  List<String>? availableTranslatedLanguages,  String? latestUploadedChapter,  List<Tag> tags,  String state,  int version,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _MangaAttributes():
 return $default(_that.title,_that.altTitles,_that.description,_that.isLocked,_that.links,_that.originalLanguage,_that.lastVolume,_that.lastChapter,_that.publicationDemographic,_that.status,_that.year,_that.contentRating,_that.chapterNumbersResetOnNewVolume,_that.availableTranslatedLanguages,_that.latestUploadedChapter,_that.tags,_that.state,_that.version,_that.createdAt,_that.updatedAt);case _:
@@ -213,7 +213,7 @@ return $default(_that.title,_that.altTitles,_that.description,_that.isLocked,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Map<String, String> title,  List<Map<String, String>> altTitles,  Map<String, String> description,  bool isLocked,  Map<String, String>? links,  String originalLanguage,  String? lastVolume,  String? lastChapter,  String? publicationDemographic,  String? status,  int? year,  String? contentRating,  bool chapterNumbersResetOnNewVolume,  List<String>? availableTranslatedLanguages,  String? latestUploadedChapter,  List<Tag> tags,  String state,  int version,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Map<String, String> title,  List<dynamic> altTitles,  Map<String, String> description,  bool isLocked,  Map<String, String>? links,  String originalLanguage,  String? lastVolume,  String? lastChapter,  String? publicationDemographic,  String? status,  int? year,  String? contentRating,  bool chapterNumbersResetOnNewVolume,  List<String>? availableTranslatedLanguages,  String? latestUploadedChapter,  List<Tag> tags,  String state,  int version,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _MangaAttributes() when $default != null:
 return $default(_that.title,_that.altTitles,_that.description,_that.isLocked,_that.links,_that.originalLanguage,_that.lastVolume,_that.lastChapter,_that.publicationDemographic,_that.status,_that.year,_that.contentRating,_that.chapterNumbersResetOnNewVolume,_that.availableTranslatedLanguages,_that.latestUploadedChapter,_that.tags,_that.state,_that.version,_that.createdAt,_that.updatedAt);case _:
@@ -228,7 +228,7 @@ return $default(_that.title,_that.altTitles,_that.description,_that.isLocked,_th
 
 @JsonSerializable(explicitToJson: true, includeIfNull: false)
 class _MangaAttributes implements MangaAttributes {
-  const _MangaAttributes({required final  Map<String, String> title, required final  List<Map<String, String>> altTitles, required final  Map<String, String> description, required this.isLocked, final  Map<String, String>? links, required this.originalLanguage, this.lastVolume, this.lastChapter, this.publicationDemographic, this.status, this.year, this.contentRating, required this.chapterNumbersResetOnNewVolume, final  List<String>? availableTranslatedLanguages, this.latestUploadedChapter, required final  List<Tag> tags, required this.state, required this.version, required this.createdAt, required this.updatedAt}): _title = title,_altTitles = altTitles,_description = description,_links = links,_availableTranslatedLanguages = availableTranslatedLanguages,_tags = tags;
+  const _MangaAttributes({required final  Map<String, String> title, required final  List<dynamic> altTitles, required final  Map<String, String> description, required this.isLocked, final  Map<String, String>? links, required this.originalLanguage, this.lastVolume, this.lastChapter, this.publicationDemographic, this.status, this.year, this.contentRating, required this.chapterNumbersResetOnNewVolume, final  List<String>? availableTranslatedLanguages, this.latestUploadedChapter, required final  List<Tag> tags, required this.state, required this.version, required this.createdAt, required this.updatedAt}): _title = title,_altTitles = altTitles,_description = description,_links = links,_availableTranslatedLanguages = availableTranslatedLanguages,_tags = tags;
   factory _MangaAttributes.fromJson(Map<String, dynamic> json) => _$MangaAttributesFromJson(json);
 
  final  Map<String, String> _title;
@@ -238,8 +238,8 @@ class _MangaAttributes implements MangaAttributes {
   return EqualUnmodifiableMapView(_title);
 }
 
- final  List<Map<String, String>> _altTitles;
-@override List<Map<String, String>> get altTitles {
+ final  List<dynamic> _altTitles;
+@override List<dynamic> get altTitles {
   if (_altTitles is EqualUnmodifiableListView) return _altTitles;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_altTitles);
@@ -325,7 +325,7 @@ abstract mixin class _$MangaAttributesCopyWith<$Res> implements $MangaAttributes
   factory _$MangaAttributesCopyWith(_MangaAttributes value, $Res Function(_MangaAttributes) _then) = __$MangaAttributesCopyWithImpl;
 @override @useResult
 $Res call({
- Map<String, String> title, List<Map<String, String>> altTitles, Map<String, String> description, bool isLocked, Map<String, String>? links, String originalLanguage, String? lastVolume, String? lastChapter, String? publicationDemographic, String? status, int? year, String? contentRating, bool chapterNumbersResetOnNewVolume, List<String>? availableTranslatedLanguages, String? latestUploadedChapter, List<Tag> tags, String state, int version, DateTime createdAt, DateTime updatedAt
+ Map<String, String> title, List<dynamic> altTitles, Map<String, String> description, bool isLocked, Map<String, String>? links, String originalLanguage, String? lastVolume, String? lastChapter, String? publicationDemographic, String? status, int? year, String? contentRating, bool chapterNumbersResetOnNewVolume, List<String>? availableTranslatedLanguages, String? latestUploadedChapter, List<Tag> tags, String state, int version, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -346,7 +346,7 @@ class __$MangaAttributesCopyWithImpl<$Res>
   return _then(_MangaAttributes(
 title: null == title ? _self._title : title // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,altTitles: null == altTitles ? _self._altTitles : altTitles // ignore: cast_nullable_to_non_nullable
-as List<Map<String, String>>,description: null == description ? _self._description : description // ignore: cast_nullable_to_non_nullable
+as List<dynamic>,description: null == description ? _self._description : description // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,isLocked: null == isLocked ? _self.isLocked : isLocked // ignore: cast_nullable_to_non_nullable
 as bool,links: freezed == links ? _self._links : links // ignore: cast_nullable_to_non_nullable
 as Map<String, String>?,originalLanguage: null == originalLanguage ? _self.originalLanguage : originalLanguage // ignore: cast_nullable_to_non_nullable

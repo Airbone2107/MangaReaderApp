@@ -1,511 +1,257 @@
-Chắc chắn rồi! Dưới đây là tệp `TODO.md` hướng dẫn chi tiết từng bước để tạo Unit Test cho các Model của bạn.
+Chào bạn,
 
-<!-- TODO.md -->
-```markdown
-# Hướng dẫn tạo Unit Test cho các Model Manga
+Tôi đã xem xét yêu cầu của bạn về việc cập nhật project để luôn bật tham số `hasAvailableChapters` trong các lệnh gọi API lấy danh sách manga. Hướng đi của bạn là rất chính xác khi không thay đổi file Model mà thay vào đó sẽ điều chỉnh trực tiếp các lời gọi API.
 
-Tài liệu này hướng dẫn chi tiết cách viết unit test cho các model trong thư mục `lib/data/models/manga` để đảm bảo chúng hoạt động chính xác với việc chuyển đổi JSON (serialization/deserialization) bằng cách sử dụng `freezed` và `json_serializable`.
+Cách làm này giúp giữ cho Model dữ liệu (`SortManga`) được trong sáng, không chứa các logic mặc định của ứng dụng, đồng thời đảm bảo mọi lệnh gọi API liên quan đều tuân thủ yêu cầu mới.
 
-## Mục lục
-1.  [Giới thiệu về Unit Testing](#1-giới-thiệu-về-unit-testing)
-2.  [Cài đặt môi trường Test](#2-cài-đặt-môi-trường-test)
-3.  [Tạo file Test cho từng Model](#3-tạo-file-test-cho-từng-model)
-    *   [3.1. Test cho `relationship.dart`](#31-test-cho-relationshipdart)
-    *   [3.2. Test cho `tag.dart`](#32-test-cho-tagdart)
-    *   [3.3. Test cho `cover.dart`](#33-test-cho-coverdart)
-    *   [3.4. Test cho `manga_attributes.dart`](#34-test-cho-manga_attributesdart)
-    *   [3.5. Test cho `manga.dart`](#35-test-cho-mangadart)
-    *   [3.6. Test cho `list_response.dart`](#36-test-cho-list_responsedart)
-4.  [Chạy tất cả các Test](#4-chạy-tất-cả-các-test)
-5.  [Tổng kết](#5-tổng-kết)
+Để thực hiện việc này, chúng ta chỉ cần cập nhật file `MangaReaderFrontend/lib/data/services/mangadex_api_service.dart`, nơi chứa logic gọi API MangaDex. Tôi sẽ thêm tham số `hasAvailableChapters: '1'` vào các phương thức `fetchManga` và `fetchMangaByIds`.
 
----
+Dưới đây là nội dung đầy đủ của file đã được cập nhật. Bạn chỉ cần sao chép và dán để thay thế file hiện tại.
 
-## 1. Giới thiệu về Unit Testing
+### Hướng dẫn cập nhật
 
-**Unit Testing** là một phương pháp kiểm thử phần mềm mà trong đó các "đơn vị" (unit) riêng lẻ của mã nguồn—thường là các hàm, phương thức, hoặc lớp—được kiểm tra độc lập để xác định xem chúng có hoạt động đúng như mong đợi hay không.
+Bạn hãy mở file sau và thay thế toàn bộ nội dung của nó bằng đoạn code dưới đây.
 
-Đối với các model dữ liệu, unit test đặc biệt quan trọng để:
-*   **Xác thực việc phân tích cú pháp JSON (Parsing)**: Đảm bảo rằng model có thể được tạo chính xác từ một chuỗi JSON nhận được từ API.
-*   **Đảm bảo tính đúng đắn của việc tuần tự hóa (Serialization)**: Kiểm tra xem model có thể được chuyển đổi thành JSON một cách chính xác để gửi đi hay không.
-*   **Phát hiện lỗi sớm**: Khi cấu trúc API thay đổi, các unit test sẽ nhanh chóng báo lỗi, giúp bạn cập nhật model kịp thời.
-
-## 2. Cài đặt môi trường Test
-
-Dự án của bạn đã có sẵn các dependency cần thiết trong `pubspec.yaml`. Thư mục `test` là nơi chứa tất cả các file test của dự án. Cấu trúc thư mục trong `test` nên phản ánh cấu trúc của `lib` để dễ dàng quản lý.
-
-Ví dụ, để test các model trong `lib/data/models/manga/`, chúng ta sẽ tạo các file test trong `test/data/models/manga/`.
-
-## 3. Tạo file Test cho từng Model
-
-Chúng ta sẽ tạo một file test riêng cho mỗi model. Mỗi file test sẽ chứa các trường hợp kiểm thử cho phương thức `fromJson` và `toJson`.
-
-### 3.1. Test cho `relationship.dart`
-
-Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\relationship_test.dart`
-
-<!-- MangaReaderFrontend\test\data\models\manga\relationship_test.dart -->
 ```dart
+// MangaReaderFrontend/lib/data/services/mangadex_api_service.dart
 import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:manga_reader_app/data/models/manga/relationship.dart';
+import 'package:http/http.dart' as http;
+import '../../utils/logger.dart';
+import '../models/manga/list_response.dart';
+import '../models/manga/manga.dart';
+import '../models/manga/tag.dart';
+import '../models/sort_manga_model.dart';
 
-void main() {
-  group('Relationship Model Test', () {
-    // 1. Dữ liệu JSON mẫu
-    const String relationshipJson = '''
-    {
-      "id": "f5d2f626-444f-4a72-887c-4bf1757e283b",
-      "type": "author",
-      "attributes": {
-        "name": "Author Name"
-      }
+/// Service gọi API MangaDex.
+///
+/// Cung cấp các phương thức lấy danh sách manga, chi tiết manga, danh sách chapter,
+/// trang ảnh chapter, danh sách tags và lấy manga theo danh sách id.
+class MangaDexApiService {
+  final String baseUrl = 'https://api.mangadex.org';
+  final http.Client _client;
+
+  /// Khởi tạo service với khả năng truyền vào `http.Client` tùy biến.
+  /// Nếu không truyền, sẽ tạo `http.Client` mặc định.
+  MangaDexApiService({http.Client? client}) : _client = client ?? http.Client();
+
+  /// Ghi log lỗi với thông tin chi tiết phản hồi từ API.
+  void logError(String functionName, http.Response response) {
+    logger.e(
+      'Lỗi trong hàm $functionName',
+      error: 'Mã trạng thái: ${response.statusCode}',
+      stackTrace: StackTrace.fromString('Nội dung phản hồi: ${response.body}'),
+    );
+  }
+
+  /// Lấy danh sách manga theo điều kiện sắp xếp, phân trang.
+  Future<List<Manga>> fetchManga({
+    int? limit,
+    int? offset,
+    SortManga? sortManga,
+  }) async {
+    final Map<String, dynamic> params = <String, dynamic>{
+      'includes[]': 'cover_art',
+      'hasAvailableChapters': '1', // Luôn bật mặc định
+    };
+
+    if (limit != null) {
+      params['limit'] = limit.toString();
     }
-    ''';
+    if (offset != null) {
+      params['offset'] = offset.toString();
+    }
 
-    final relationshipMap = json.decode(relationshipJson) as Map<String, dynamic>;
+    if (sortManga != null) {
+      params.addAll(sortManga.toParams());
+    }
 
-    // 2. Test phương thức fromJson
-    test('fromJson should correctly parse the JSON', () {
-      // Arrange & Act
-      final relationship = Relationship.fromJson(relationshipMap);
+    final Uri uri = Uri.parse(
+      '$baseUrl/manga',
+    ).replace(queryParameters: params);
+    final http.Response response = await _client.get(uri);
 
-      // Assert
-      expect(relationship.id, 'f5d2f626-444f-4a72-887c-4bf1757e283b');
-      expect(relationship.type, 'author');
-      expect(relationship.attributes, isA<Map<String, dynamic>>());
-      expect(relationship.attributes!['name'], 'Author Name');
-    });
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final listResponse = ListResponse<Manga>.fromJson(
+        data,
+        (json) => Manga.fromJson(json as Map<String, dynamic>),
+      );
+      return listResponse.data;
+    } else if (response.statusCode == 503) {
+      throw Exception(
+        'Máy chủ MangaDex hiện đang bảo trì, xin vui lòng thử lại sau!',
+      );
+    } else {
+      logError('fetchManga', response);
+      throw Exception('Lỗi khi tải manga: ${response.statusCode}');
+    }
+  }
 
-    // 3. Test phương thức toJson
-    test('toJson should correctly convert the object to JSON', () {
-      // Arrange
-      final relationship = Relationship.fromJson(relationshipMap);
+  /// Lấy chi tiết một manga theo `mangaId`.
+  Future<Manga> fetchMangaDetails(String mangaId) async {
+    final Map<String, dynamic> params = <String, dynamic>{
+      'includes[]': ['author', 'cover_art']
+    };
+    final Uri uri = Uri.parse(
+      '$baseUrl/manga/$mangaId',
+    ).replace(queryParameters: params);
+    final http.Response response = await _client.get(uri);
 
-      // Act
-      final resultJson = relationship.toJson();
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      return Manga.fromJson(data['data'] as Map<String, dynamic>);
+    } else {
+      logError('fetchMangaDetails', response);
+      throw Exception('Lỗi khi tải chi tiết manga');
+    }
+  }
 
-      // Assert
-      expect(resultJson, relationshipMap);
-    });
+  /// Lấy danh sách các chapter của một manga theo ngôn ngữ, thứ tự, và giới hạn tối đa.
+  Future<List<dynamic>> fetchChapters(
+    String mangaId,
+    List<String> languages, {
+    String order = 'desc',
+    int? maxChapters,
+  }) async {
+    final List<String> validLanguages = List<String>.from(languages);
+    validLanguages.removeWhere(
+      (String lang) => !RegExp(r'^[a-z]{2}(-[a-z]{2})?$').hasMatch(lang),
+    );
 
-    // 4. Test trường hợp attributes là null
-    test('fromJson should handle null attributes', () {
-      // Arrange
-      final relationshipMapWithoutAttributes = <String, dynamic>{
-        'id': 'f5d2f626-444f-4a72-887c-4bf1757e283b',
-        'type': 'author',
-        'attributes': null
+    if (validLanguages.isEmpty) {
+      throw Exception(
+        'Danh sách ngôn ngữ không hợp lệ. Vui lòng kiểm tra cài đặt.',
+      );
+    }
+
+    final List<dynamic> allChapters = <dynamic>[];
+    int offset = 0;
+    const int limit = 100;
+
+    while (true) {
+      final Map<String, dynamic> queryParameters = <String, dynamic>{
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+        'order[chapter]': order,
+        'translatedLanguage[]': validLanguages,
       };
 
-      // Act
-      final relationship =
-          Relationship.fromJson(relationshipMapWithoutAttributes);
+      final Uri uri = Uri.parse('$baseUrl/manga/$mangaId/feed')
+          .replace(queryParameters: queryParameters);
+      final http.Response response = await _client.get(uri);
 
-      // Assert
-      expect(relationship.id, 'f5d2f626-444f-4a72-887c-4bf1757e283b');
-      expect(relationship.type, 'author');
-      expect(relationship.attributes, isNull);
-    });
-  });
-}
-```
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final List<dynamic> chapters = data['data'] as List<dynamic>;
 
-### 3.2. Test cho `tag.dart`
+        if (chapters.isEmpty) {
+          break;
+        }
 
-Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\tag_test.dart`
+        allChapters.addAll(chapters);
 
-<!-- MangaReaderFrontend\test\data\models\manga\tag_test.dart -->
-```dart
-import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:manga_reader_app/data/models/manga/tag.dart';
+        if (maxChapters != null && allChapters.length >= maxChapters) {
+          return allChapters.take(maxChapters).toList();
+        }
 
-void main() {
-  group('Tag Model Test', () {
-    const String tagJson = '''
-    {
-      "id": "423e2eae-a7a2-4a8b-ac03-a8351462d71d",
-      "type": "tag",
-      "attributes": {
-        "name": {
-          "en": "Action"
-        },
-        "description": {
-          "en": "Description for Action"
-        },
-        "group": "genre",
-        "version": 1
+        offset += limit;
+      } else if (response.statusCode == 503) {
+        throw Exception(
+          'Máy chủ MangaDex hiện đang bảo trì, xin vui lòng thử lại sau!',
+        );
+      } else {
+        logError('fetchChapters', response);
+        throw Exception(
+          'Lỗi trong hàm fetchChapters:\nMã trạng thái: ${response.statusCode}\nNội dung phản hồi: ${response.body}',
+        );
       }
     }
-    ''';
 
-    final tagMap = json.decode(tagJson) as Map<String, dynamic>;
+    return allChapters;
+  }
 
-    test('Tag.fromJson should correctly parse the JSON', () {
-      final tag = Tag.fromJson(tagMap);
+  /// Lấy danh sách URL trang ảnh của một chapter.
+  Future<List<String>> fetchChapterPages(String chapterId) async {
+    final http.Response response = await _client.get(
+      Uri.parse('$baseUrl/at-home/server/$chapterId'),
+    );
 
-      expect(tag.id, '423e2eae-a7a2-4a8b-ac03-a8351462d71d');
-      expect(tag.type, 'tag');
-      expect(tag.attributes, isA<TagAttributes>());
-    });
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final List<String> pages = List<String>.from(
+        data['chapter']['data'] as List<dynamic>,
+      );
+      final String imageBaseUrl = data['baseUrl'] as String;
+      final String hash = data['chapter']['hash'] as String;
+      return pages
+          .map((String page) => '$imageBaseUrl/data/$hash/$page')
+          .toList();
+    } else {
+      logError('fetchChapterPages', response);
+      throw Exception('Lỗi khi tải các trang chương');
+    }
+  }
 
-    test('Tag.toJson should correctly convert the object to JSON', () {
-      final tag = Tag.fromJson(tagMap);
-      final resultJson = tag.toJson();
-      expect(resultJson, tagMap);
-    });
+  /// Lấy toàn bộ danh sách tags của MangaDex.
+  Future<List<Tag>> fetchTags() async {
+    final http.Response response = await _client.get(
+      Uri.parse('$baseUrl/manga/tag'),
+    );
 
-    test('TagAttributes.fromJson should correctly parse the JSON', () {
-      final attributes =
-          TagAttributes.fromJson(tagMap['attributes'] as Map<String, dynamic>);
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final listResponse = ListResponse<Tag>.fromJson(
+        data,
+        (json) => Tag.fromJson(json as Map<String, dynamic>),
+      );
+      return listResponse.data;
+    } else {
+      logError('fetchTags', response);
+      throw Exception('Lỗi khi tải danh sách tags');
+    }
+  }
 
-      expect(attributes.name['en'], 'Action');
-      expect(attributes.description['en'], 'Description for Action');
-      expect(attributes.group, 'genre');
-      expect(attributes.version, 1);
-    });
+  /// Lấy thông tin nhiều manga theo danh sách `mangaIds`.
+  Future<List<Manga>> fetchMangaByIds(List<String> mangaIds) async {
+    if (mangaIds.isEmpty) {
+      return <Manga>[];
+    }
 
-    test('TagAttributes.toJson should correctly convert the object to JSON',
-        () {
-      final attributes =
-          TagAttributes.fromJson(tagMap['attributes'] as Map<String, dynamic>);
-      final resultJson = attributes.toJson();
-      expect(resultJson, tagMap['attributes']);
-    });
-  });
-}
-```
+    final queryParameters = <String, dynamic>{
+      'ids[]': mangaIds,
+      'includes[]': 'cover_art',
+      'hasAvailableChapters': '1', // Luôn bật mặc định
+    };
+    final Uri url = Uri.parse(
+      '$baseUrl/manga',
+    ).replace(queryParameters: queryParameters);
 
-### 3.3. Test cho `cover.dart`
+    try {
+      final http.Response response = await _client.get(url);
 
-Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\cover_test.dart`
-
-<!-- MangaReaderFrontend\test\data\models\manga\cover_test.dart -->
-```dart
-import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:manga_reader_app/data/models/manga/cover.dart';
-
-void main() {
-  group('Cover Model Test', () {
-    const String coverJson = '''
-    {
-      "id": "a925433a-236b-4b13-a4a3-731338d3393e",
-      "type": "cover_art",
-      "attributes": {
-        "fileName": "cover.jpg",
-        "description": "Main cover",
-        "volume": "1",
-        "locale": "en",
-        "version": 1,
-        "createdAt": "2021-05-24T17:03:00.000Z",
-        "updatedAt": "2021-05-24T17:03:00.000Z"
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final listResponse = ListResponse<Manga>.fromJson(
+          data,
+          (json) => Manga.fromJson(json as Map<String, dynamic>),
+        );
+        return listResponse.data;
+      } else {
+        throw Exception('Failed to fetch manga: ${response.statusCode}');
       }
+    } catch (error) {
+      throw Exception('Error fetching manga: $error');
     }
-    ''';
-
-    final coverMap = json.decode(coverJson) as Map<String, dynamic>;
-
-    test('Cover.fromJson should correctly parse the JSON', () {
-      final cover = Cover.fromJson(coverMap);
-
-      expect(cover.id, 'a925433a-236b-4b13-a4a3-731338d3393e');
-      expect(cover.type, 'cover_art');
-      expect(cover.attributes, isA<CoverAttributes>());
-    });
-
-    test('Cover.toJson should correctly convert the object to JSON', () {
-      final cover = Cover.fromJson(coverMap);
-      final resultJson = cover.toJson();
-      expect(resultJson, coverMap);
-    });
-
-    test('CoverAttributes.fromJson should correctly parse the JSON', () {
-      final attributes = CoverAttributes.fromJson(
-          coverMap['attributes'] as Map<String, dynamic>);
-
-      expect(attributes.fileName, 'cover.jpg');
-      expect(attributes.description, 'Main cover');
-      expect(attributes.volume, '1');
-      expect(attributes.locale, 'en');
-      expect(attributes.version, 1);
-      expect(attributes.createdAt, DateTime.parse('2021-05-24T17:03:00.000Z'));
-      expect(attributes.updatedAt, DateTime.parse('2021-05-24T17:03:00.000Z'));
-    });
-
-    test('CoverAttributes.toJson should correctly convert the object to JSON',
-        () {
-      final attributes = CoverAttributes.fromJson(
-          coverMap['attributes'] as Map<String, dynamic>);
-      final resultJson = attributes.toJson();
-      expect(resultJson, coverMap['attributes']);
-    });
-  });
+  }
 }
 ```
 
-### 3.4. Test cho `manga_attributes.dart`
+Với thay đổi này, tất cả các chức năng tìm kiếm, hiển thị danh sách truyện trong ứng dụng của bạn sẽ mặc định chỉ lấy những manga có chapter sẵn có, đúng như yêu cầu.
 
-Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\manga_attributes_test.dart`
-
-<!-- MangaReaderFrontend\test\data\models\manga\manga_attributes_test.dart -->
-```dart
-import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:manga_reader_app/data/models/manga/manga_attributes.dart';
-import 'package:manga_reader_app/data/models/manga/tag.dart';
-
-void main() {
-  group('MangaAttributes Model Test', () {
-    const String mangaAttributesJson = '''
-    {
-      "title": { "en": "Test Manga" },
-      "altTitles": [ { "ja": "テスト漫画" } ],
-      "description": { "en": "This is a test manga." },
-      "isLocked": false,
-      "links": { "al": "12345" },
-      "originalLanguage": "ja",
-      "lastVolume": "5",
-      "lastChapter": "50",
-      "publicationDemographic": "shounen",
-      "status": "ongoing",
-      "year": 2020,
-      "contentRating": "safe",
-      "chapterNumbersResetOnNewVolume": false,
-      "availableTranslatedLanguages": ["en", "vi"],
-      "latestUploadedChapter": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
-      "tags": [
-        {
-          "id": "423e2eae-a7a2-4a8b-ac03-a8351462d71d",
-          "type": "tag",
-          "attributes": {
-            "name": { "en": "Action" },
-            "description": {},
-            "group": "genre",
-            "version": 1
-          }
-        }
-      ],
-      "state": "published",
-      "version": 1,
-      "createdAt": "2020-01-01T00:00:00.000Z",
-      "updatedAt": "2021-01-01T00:00:00.000Z"
-    }
-    ''';
-
-    final mangaAttributesMap =
-        json.decode(mangaAttributesJson) as Map<String, dynamic>;
-
-    test('MangaAttributes.fromJson should correctly parse the JSON', () {
-      final attributes = MangaAttributes.fromJson(mangaAttributesMap);
-
-      expect(attributes.title['en'], 'Test Manga');
-      expect(attributes.altTitles.first['ja'], 'テスト漫画');
-      expect(attributes.description['en'], 'This is a test manga.');
-      expect(attributes.isLocked, false);
-      expect(attributes.links!['al'], '12345');
-      expect(attributes.originalLanguage, 'ja');
-      expect(attributes.lastVolume, '5');
-      expect(attributes.lastChapter, '50');
-      expect(attributes.publicationDemographic, 'shounen');
-      expect(attributes.status, 'ongoing');
-      expect(attributes.year, 2020);
-      expect(attributes.contentRating, 'safe');
-      expect(attributes.chapterNumbersResetOnNewVolume, false);
-      expect(attributes.availableTranslatedLanguages, containsAll(<String>['en', 'vi']));
-      expect(attributes.latestUploadedChapter,
-          'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6');
-      expect(attributes.tags, isA<List<Tag>>());
-      expect(attributes.tags.first.id, '423e2eae-a7a2-4a8b-ac03-a8351462d71d');
-      expect(attributes.state, 'published');
-      expect(attributes.version, 1);
-      expect(attributes.createdAt, DateTime.parse('2020-01-01T00:00:00.000Z'));
-      expect(attributes.updatedAt, DateTime.parse('2021-01-01T00:00:00.000Z'));
-    });
-
-    test('MangaAttributes.toJson should correctly convert the object to JSON',
-        () {
-      final attributes = MangaAttributes.fromJson(mangaAttributesMap);
-      final resultJson = attributes.toJson();
-      expect(resultJson, mangaAttributesMap);
-    });
-  });
-}
-```
-
-### 3.5. Test cho `manga.dart`
-
-Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\manga_test.dart`
-
-<!-- MangaReaderFrontend\test\data\models\manga\manga_test.dart -->
-```dart
-import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:manga_reader_app/data/models/manga/manga.dart';
-import 'package:manga_reader_app/data/models/manga/manga_attributes.dart';
-import 'package:manga_reader_app/data/models/manga/relationship.dart';
-
-void main() {
-  group('Manga Model Test', () {
-    const String mangaJson = '''
-    {
-      "id": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
-      "type": "manga",
-      "attributes": {
-        "title": { "en": "Test Manga" },
-        "altTitles": [],
-        "description": { "en": "Description" },
-        "isLocked": false,
-        "originalLanguage": "ja",
-        "status": "ongoing",
-        "contentRating": "safe",
-        "chapterNumbersResetOnNewVolume": false,
-        "tags": [],
-        "state": "published",
-        "version": 1,
-        "createdAt": "2020-01-01T00:00:00.000Z",
-        "updatedAt": "2021-01-01T00:00:00.000Z"
-      },
-      "relationships": [
-        {
-          "id": "f5d2f626-444f-4a72-887c-4bf1757e283b",
-          "type": "author"
-        },
-        {
-          "id": "a925433a-236b-4b13-a4a3-731338d3393e",
-          "type": "cover_art"
-        }
-      ]
-    }
-    ''';
-
-    final mangaMap = json.decode(mangaJson) as Map<String, dynamic>;
-
-    test('Manga.fromJson should correctly parse the JSON', () {
-      final manga = Manga.fromJson(mangaMap);
-
-      expect(manga.id, 'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6');
-      expect(manga.type, 'manga');
-      expect(manga.attributes, isA<MangaAttributes>());
-      expect(manga.attributes.title['en'], 'Test Manga');
-      expect(manga.relationships, isA<List<Relationship>>());
-      expect(manga.relationships.length, 2);
-      expect(manga.relationships[0].type, 'author');
-      expect(manga.relationships[1].type, 'cover_art');
-    });
-
-    test('Manga.toJson should correctly convert the object to JSON', () {
-      // Vì relationship trong json mẫu không có attributes, ta cần tạo 1 map tương ứng
-      final expectedJson = json.decode(mangaJson) as Map<String, dynamic>;
-      // `fromJson` của relationship sẽ thêm `attributes: null` nếu nó không có
-      (expectedJson['relationships'] as List<dynamic>).forEach((element) {
-        (element as Map<String, dynamic>)['attributes'] = null;
-      });
-
-      final manga = Manga.fromJson(mangaMap);
-      final resultJson = manga.toJson();
-
-      expect(resultJson, expectedJson);
-    });
-  });
-}
-```
-
-### 3.6. Test cho `list_response.dart`
-
-Đây là một lớp generic, vì vậy chúng ta sẽ test nó với một kiểu cụ thể, ví dụ `Manga`.
-
-Tạo file mới tại đường dẫn: `MangaReaderFrontend\test\data\models\manga\list_response_test.dart`
-
-<!-- MangaReaderFrontend\test\data\models\manga\list_response_test.dart -->
-```dart
-import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:manga_reader_app/data/models/manga/list_response.dart';
-import 'package:manga_reader_app/data/models/manga/manga.dart';
-
-void main() {
-  group('ListResponse<T> Model Test', () {
-    const String mangaListResponseJson = '''
-    {
-      "result": "ok",
-      "response": "collection",
-      "data": [
-        {
-          "id": "manga-id-1",
-          "type": "manga",
-          "attributes": {
-            "title": { "en": "Manga 1" },
-            "altTitles": [],
-            "description": { "en": "Desc 1" },
-            "isLocked": false,
-            "originalLanguage": "ja",
-            "status": "ongoing",
-            "contentRating": "safe",
-            "chapterNumbersResetOnNewVolume": false,
-            "tags": [],
-            "state": "published",
-            "version": 1,
-            "createdAt": "2020-01-01T00:00:00.000Z",
-            "updatedAt": "2021-01-01T00:00:00.000Z"
-          },
-          "relationships": []
-        }
-      ],
-      "limit": 1,
-      "offset": 0,
-      "total": 100
-    }
-    ''';
-
-    final mangaListResponseMap =
-        json.decode(mangaListResponseJson) as Map<String, dynamic>;
-
-    test('ListResponse<Manga>.fromJson should correctly parse the JSON', () {
-      final response =
-          ListResponse<Manga>.fromJson(mangaListResponseMap, Manga.fromJson);
-
-      expect(response.result, 'ok');
-      expect(response.response, 'collection');
-      expect(response.limit, 1);
-      expect(response.offset, 0);
-      expect(response.total, 100);
-      expect(response.data, isA<List<Manga>>());
-      expect(response.data.length, 1);
-      expect(response.data.first.id, 'manga-id-1');
-      expect(response.data.first.attributes.title['en'], 'Manga 1');
-    });
-
-    test('ListResponse<Manga>.toJson should correctly convert the object to JSON', () {
-      final response = ListResponse<Manga>.fromJson(mangaListResponseMap, Manga.fromJson);
-      final resultJson = response.toJson((manga) => manga.toJson());
-      
-      expect(resultJson, mangaListResponseMap);
-    });
-  });
-}
-```
-
-## 4. Chạy tất cả các Test
-
-Sau khi đã tạo tất cả các file test, bạn có thể chạy chúng từ cửa sổ Terminal trong Visual Studio Code hoặc terminal của hệ thống.
-
-Mở terminal và di chuyển đến thư mục gốc của dự án (`MangaReaderFrontend`), sau đó chạy lệnh sau:
-
-```bash
-flutter test
-```
-
-Lệnh này sẽ tự động tìm và chạy tất cả các file có đuôi `_test.dart` trong thư mục `test`. Nếu tất cả các test đều thành công, bạn sẽ thấy output tương tự như sau:
-
-```
-00:02 +6: All tests passed!
-```
-
-Nếu có lỗi, terminal sẽ chỉ rõ test nào đã thất bại và lý do tại sao, giúp bạn dễ dàng sửa lỗi.
-
-## 5. Tổng kết
-
-Bằng cách thực hiện các bước trên, bạn đã xây dựng một bộ unit test vững chắc cho các model dữ liệu của mình. Điều này không chỉ đảm bảo code của bạn hoạt động đúng ở hiện tại mà còn giúp việc bảo trì và mở rộng ứng dụng trong tương lai trở nên dễ dàng và an toàn hơn.
-```
+Nếu có bất kỳ câu hỏi nào khác, đừng ngần ngại hỏi nhé

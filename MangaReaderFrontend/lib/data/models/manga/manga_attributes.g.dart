@@ -9,9 +9,7 @@ part of 'manga_attributes.dart';
 _MangaAttributes _$MangaAttributesFromJson(Map<String, dynamic> json) =>
     _MangaAttributes(
       title: Map<String, String>.from(json['title'] as Map),
-      altTitles: (json['altTitles'] as List<dynamic>)
-          .map((e) => Map<String, String>.from(e as Map))
-          .toList(),
+      altTitles: json['altTitles'] as List<dynamic>,
       description: Map<String, String>.from(json['description'] as Map),
       isLocked: json['isLocked'] as bool,
       links: (json['links'] as Map<String, dynamic>?)?.map(

@@ -1,8 +1,8 @@
-// lib/features/account/view/account_screen.dart
 import 'package:flutter/material.dart';
 import '../../../data/models/user_model.dart';
 import '../logic/account_logic.dart';
 
+/// Màn hình quản lý tài khoản người dùng.
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
@@ -34,13 +34,12 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tài khoản của bạn'),
-      ),
+      appBar: AppBar(title: const Text('Tài khoản của bạn')),
       body: _buildBody(),
     );
   }
 
+  /// Xây dựng phần thân theo trạng thái đăng nhập và tải dữ liệu.
   Widget _buildBody() {
     if (_logic.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -61,16 +60,18 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
+  /// Nội dung khi người dùng đã đăng nhập.
   Widget _buildUserContent() {
     return Column(
       children: <Widget>[
         UserAccountsDrawerHeader(
           accountName: Text(_logic.user!.displayName),
           accountEmail: Text(_logic.user!.email),
-          currentAccountPicture: _logic.user!.photoURL != null &&
-                  _logic.user!.photoURL!.isNotEmpty
+          currentAccountPicture:
+              _logic.user!.photoURL != null && _logic.user!.photoURL!.isNotEmpty
               ? CircleAvatar(
-                  backgroundImage: NetworkImage(_logic.user!.photoURL!))
+                  backgroundImage: NetworkImage(_logic.user!.photoURL!),
+                )
               : CircleAvatar(
                   backgroundColor: Colors.blue,
                   child: Text(

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:manga_reader_app/data/models/manga/manga.dart';
+import '../data/models/manga/manga.dart';
+import '../data/models/manga/relationship.dart';
 import '../data/models/sort_manga_model.dart';
 import '../data/services/mangadex_api_service.dart';
 import '../features/detail_manga/view/manga_detail_screen.dart';
 import '../utils/logger.dart';
+import '../utils/manga_helper.dart';
 
+/// Lưới hoặc danh sách hiển thị manga với lazy-loading.
 class MangaGridView extends StatefulWidget {
   final SortManga? sortManga;
   final ScrollController controller;
@@ -26,7 +29,6 @@ class MangaGridView extends StatefulWidget {
 class _MangaGridViewState extends State<MangaGridView> {
   final MangaDexApiService _service = MangaDexApiService();
   List<Manga> mangas = <Manga>[];
-  Map<String, String> coverCache = <String, String>{};
   int offset = 0;
   bool isLoading = false;
 
@@ -52,6 +54,7 @@ class _MangaGridViewState extends State<MangaGridView> {
     super.dispose();
   }
 
+  /// Tải danh sách manga theo trang, tránh trùng nếu đã có.
   Future<void> _loadMangas() async {
     if (isLoading) {
       return;
@@ -70,7 +73,7 @@ class _MangaGridViewState extends State<MangaGridView> {
         setState(() {
           for (final Manga manga in newMangas) {
             if (!mangas.any(
-              (Manga existingManga) => existingManga.id == manga.id,
+                  (Manga existingManga) => existingManga.id == manga.id,
             )) {
               mangas.add(manga);
             }
@@ -90,6 +93,7 @@ class _MangaGridViewState extends State<MangaGridView> {
     }
   }
 
+  /// Hiển thị snackbar lỗi nếu đang mounted.
   void _showErrorMessage(String message) {
     if (mounted) {
       ScaffoldMessenger.of(
@@ -98,23 +102,39 @@ class _MangaGridViewState extends State<MangaGridView> {
     }
   }
 
+  /// Lắng nghe cuộn để tự động tải thêm khi gần cuối danh sách.
   void _onScroll() {
     if (widget.controller.position.pixels >=
-            widget.controller.position.maxScrollExtent - 200 &&
+        widget.controller.position.maxScrollExtent - 200 &&
         !isLoading) {
       _loadMangas();
     }
   }
 
-  Widget _buildCoverImage(String mangaId) {
-    if (coverCache.containsKey(mangaId)) {
+  /// Dựng ảnh bìa cho một phần tử manga.
+  Widget _buildCoverImage(Manga manga) {
+    String? coverFileName;
+    try {
+      final Relationship coverArtRelationship =
+      manga.relationships.firstWhere((rel) => rel.type == 'cover_art');
+      if (coverArtRelationship.attributes != null) {
+        coverFileName =
+        coverArtRelationship.attributes!['fileName'] as String?;
+      }
+    } catch (e) {
+      coverFileName = null;
+    }
+
+    if (coverFileName != null) {
+      final String imageUrl =
+          'https://uploads.mangadex.org/covers/${manga.id}/$coverFileName.512.jpg';
       return CachedNetworkImage(
-        imageUrl: coverCache[mangaId]!,
+        imageUrl: imageUrl,
         fit: BoxFit.cover,
         placeholder: (BuildContext context, String url) =>
-            const Center(child: CircularProgressIndicator()),
+        const Center(child: CircularProgressIndicator()),
         errorWidget: (BuildContext context, String url, dynamic error) =>
-            const Icon(Icons.broken_image),
+            Image.asset('assets/placeholder.png', fit: BoxFit.cover),
         useOldImageOnUrlChange: true,
         cacheManager: CacheManager(
           Config(
@@ -126,25 +146,7 @@ class _MangaGridViewState extends State<MangaGridView> {
       );
     }
 
-    return FutureBuilder<String>(
-      future: _service.fetchCoverUrl(mangaId),
-      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-        if (snapshot.connectionState == ConnectionState.done &&
-            snapshot.hasData) {
-          coverCache[mangaId] = snapshot.data!;
-          return CachedNetworkImage(
-            imageUrl: snapshot.data!,
-            fit: BoxFit.cover,
-            placeholder: (BuildContext context, String url) =>
-                const Center(child: CircularProgressIndicator()),
-            errorWidget: (BuildContext context, String url, dynamic error) =>
-                const Icon(Icons.broken_image),
-            useOldImageOnUrlChange: true,
-          );
-        }
-        return const Center(child: CircularProgressIndicator());
-      },
-    );
+    return Image.asset('assets/placeholder.png', fit: BoxFit.cover);
   }
 
   @override
@@ -172,8 +174,8 @@ class _MangaGridViewState extends State<MangaGridView> {
         }
 
         final Manga manga = mangas[index];
-        final String mangaId = manga.id;
-        final String title = manga.attributes.title['en'] ?? 'Không có tiêu đề';
+
+        final String title = manga.getDisplayTitle();
 
         return GestureDetector(
           onTap: () {
@@ -181,7 +183,7 @@ class _MangaGridViewState extends State<MangaGridView> {
               context,
               MaterialPageRoute(
                 builder: (BuildContext context) =>
-                    MangaDetailScreen(mangaId: mangaId),
+                    MangaDetailScreen(mangaId: manga.id),
               ),
             );
           },
@@ -190,7 +192,7 @@ class _MangaGridViewState extends State<MangaGridView> {
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8.0),
-                  child: _buildCoverImage(mangaId),
+                  child: _buildCoverImage(manga),
                 ),
               ),
               const SizedBox(height: 4),
@@ -217,10 +219,8 @@ class _MangaGridViewState extends State<MangaGridView> {
         }
 
         final Manga manga = mangas[index];
-        final String mangaId = manga.id;
-        final String title = manga.attributes.title['en'] ?? 'Không có tiêu đề';
-        final String description =
-            manga.attributes.description['en'] ?? 'No description available';
+        final String title = manga.getDisplayTitle();
+        final String description = manga.getDisplayDescription();
         final List<String> tags = manga.attributes.tags
             .map((tag) => tag.attributes.name['en'] ?? '')
             .where((name) => name.isNotEmpty)
@@ -232,7 +232,7 @@ class _MangaGridViewState extends State<MangaGridView> {
               context,
               MaterialPageRoute(
                 builder: (BuildContext context) =>
-                    MangaDetailScreen(mangaId: mangaId),
+                    MangaDetailScreen(mangaId: manga.id),
               ),
             );
           },
@@ -259,7 +259,7 @@ class _MangaGridViewState extends State<MangaGridView> {
                   alignment: Alignment.center,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4.0),
-                    child: _buildCoverImage(mangaId),
+                    child: _buildCoverImage(manga),
                   ),
                 ),
                 const SizedBox(width: 16),

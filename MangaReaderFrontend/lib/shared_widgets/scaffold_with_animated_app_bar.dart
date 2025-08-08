@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+/// Scaffold tùy biến với AppBar ẩn/hiện theo hướng cuộn và nút scroll-to-top.
 class ScaffoldWithAnimatedAppBar extends StatefulWidget {
   final String title;
   final Widget Function(ScrollController controller) bodyBuilder;
@@ -37,6 +38,7 @@ class _ScaffoldWithAnimatedAppBarState
     super.dispose();
   }
 
+  /// Xử lý sự kiện cuộn để ẩn/hiện AppBar và hiện nút scroll-to-top.
   void _handleScroll() {
     if (!mounted) return;
 
@@ -56,6 +58,7 @@ class _ScaffoldWithAnimatedAppBarState
     }
   }
 
+  /// Cuộn về đầu trang và hiển thị AppBar.
   void _scrollToTop() {
     setState(() => _isAppBarVisible = true);
     _scrollController.animateTo(
@@ -77,9 +80,10 @@ class _ScaffoldWithAnimatedAppBarState
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             padding: EdgeInsets.only(
-                top: _isAppBarVisible
-                    ? appBarHeight + statusBarHeight
-                    : statusBarHeight),
+              top: _isAppBarVisible
+                  ? appBarHeight + statusBarHeight
+                  : statusBarHeight,
+            ),
             child: widget.bodyBuilder(_scrollController),
           ),
           AnimatedPositioned(
@@ -89,7 +93,8 @@ class _ScaffoldWithAnimatedAppBarState
             left: 0,
             right: 0,
             child: Container(
-              color: Theme.of(context).appBarTheme.backgroundColor ??
+              color:
+                  Theme.of(context).appBarTheme.backgroundColor ??
                   Theme.of(context).primaryColor,
               child: AppBar(
                 title: Text(widget.title),

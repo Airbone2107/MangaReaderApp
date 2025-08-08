@@ -5,6 +5,7 @@ import '../../../utils/logger.dart';
 import '../view/manga_list_search.dart';
 import '../../../data/models/sort_manga_model.dart';
 
+/// Nghiệp vụ cho màn hình tìm kiếm nâng cao.
 class SearchLogic {
   final MangaDexApiService _service = MangaDexApiService();
   final TextEditingController searchController = TextEditingController();
@@ -22,19 +23,19 @@ class SearchLogic {
   late BuildContext context;
   late VoidCallback refreshUI;
 
+  /// Khởi tạo context và tải danh sách tags.
   void init(BuildContext context, VoidCallback refreshUI) {
     this.context = context;
     this.refreshUI = refreshUI;
     _loadTags();
   }
 
+  /// Tải, sắp xếp và lưu danh sách tags khả dụng.
   Future<void> _loadTags() async {
     try {
       final List<Tag> tags = await _service.fetchTags();
-      // Tạo một bản sao có thể thay đổi của danh sách
       availableTags = List<Tag>.from(tags);
 
-      // Bây giờ có thể sắp xếp danh sách đã được sao chép
       availableTags.sort((Tag a, Tag b) {
         final int groupCompare = a.attributes.group.compareTo(
           b.attributes.group,
@@ -58,6 +59,7 @@ class SearchLogic {
     }
   }
 
+  /// Thêm/bỏ một tag khỏi danh sách bao gồm.
   void onTagIncludePressed(Tag tag) {
     if (excludedTags.contains(tag.id)) {
       excludedTags.remove(tag.id);
@@ -68,6 +70,7 @@ class SearchLogic {
     refreshUI();
   }
 
+  /// Thêm/bỏ một tag khỏi danh sách loại trừ.
   void onTagExcludePressed(Tag tag) {
     if (selectedTags.contains(tag.id)) {
       selectedTags.remove(tag.id);
@@ -78,18 +81,36 @@ class SearchLogic {
     refreshUI();
   }
 
+  /// Trả về map sắp xếp theo lựa chọn hiện tại.
+  Map<String, SortOrder> _getSortOrder() {
+    switch (sortBy) {
+      case 'Truyện mới':
+        return {'createdAt': SortOrder.desc};
+      case 'Theo dõi nhiều nhất':
+        return {'followedCount': SortOrder.desc};
+      case 'Mới cập nhật':
+      default:
+        return {'latestUploadedChapter': SortOrder.desc};
+    }
+  }
+
+  /// Thực thi tìm kiếm và điều hướng sang màn kết quả.
   Future<void> performSearch() async {
     isLoading = true;
     refreshUI();
 
     final SortManga sortManga = SortManga(
-      title: searchController.text.trim(),
-      includedTags: selectedTags.toList(),
-      excludedTags: excludedTags.toList(),
-      safety: safetyFilter,
-      status: statusFilter,
-      demographic: demographicFilter,
-      sortBy: sortBy,
+      title: searchController.text.trim().isNotEmpty
+          ? searchController.text.trim()
+          : null,
+      includedTags: selectedTags.isNotEmpty ? selectedTags.toList() : null,
+      excludedTags: excludedTags.isNotEmpty ? excludedTags.toList() : null,
+      contentRating: safetyFilter != 'Tất cả' ? [safetyFilter] : null,
+      status: statusFilter != 'Tất cả' ? [statusFilter] : null,
+      publicationDemographic: demographicFilter != 'Tất cả'
+          ? [demographicFilter]
+          : null,
+      order: _getSortOrder(),
     );
 
     isLoading = false;

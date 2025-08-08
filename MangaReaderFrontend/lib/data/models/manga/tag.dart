@@ -3,6 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'tag.freezed.dart';
 part 'tag.g.dart';
 
+/// Thông tin một tag và nhóm của nó.
 @freezed
 abstract class Tag with _$Tag {
   const factory Tag({
@@ -14,6 +15,7 @@ abstract class Tag with _$Tag {
   factory Tag.fromJson(Map<String, dynamic> json) => _$TagFromJson(json);
 }
 
+/// Thuộc tính chi tiết của một tag.
 @freezed
 abstract class TagAttributes with _$TagAttributes {
   const factory TagAttributes({

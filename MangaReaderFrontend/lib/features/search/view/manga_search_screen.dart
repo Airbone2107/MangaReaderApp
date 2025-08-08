@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/models/manga/tag.dart';
 import '../logic/search_logic.dart';
 
+/// Màn hình tìm kiếm nâng cao cho manga.
 class AdvancedSearchScreen extends StatefulWidget {
   const AdvancedSearchScreen({super.key});
 

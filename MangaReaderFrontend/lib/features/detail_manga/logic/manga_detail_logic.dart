@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:manga_reader_app/config/language_config.dart';
 import '../../../data/models/manga/manga.dart';
 import '../../../data/services/mangadex_api_service.dart';
 import '../../../data/services/user_api_service.dart';
 import '../../../data/storage/secure_storage_service.dart';
 import '../../../utils/logger.dart';
 
+/// Nghiệp vụ cho màn chi tiết Manga: tải chi tiết, chapters và theo dõi.
 class MangaDetailLogic {
   final String mangaId;
   final VoidCallback refreshUI;
@@ -13,26 +15,25 @@ class MangaDetailLogic {
   final UserApiService _userApiService = UserApiService();
 
   late Future<Manga> mangaDetails;
-  late Future<List<dynamic>>
-  chapters; // Giữ nguyên vì Chapter model chưa hoàn thiện
-  late Future<String> coverUrl;
+  /// Danh sách chapter dạng raw theo ngôn ngữ (giữ nguyên vì model chưa hoàn thiện).
+  late Future<List<dynamic>> chapters;
   bool isFollowing = false;
 
   MangaDetailLogic({required this.mangaId, required this.refreshUI}) {
     _init();
   }
 
+  /// Khởi tạo dữ liệu ban đầu.
   void _init() {
-    final List<String> defaultLanguages = <String>['en', 'vi'];
     mangaDetails = _mangaDexService.fetchMangaDetails(mangaId);
     chapters = _mangaDexService.fetchChapters(
       mangaId,
-      defaultLanguages.join(','),
+      LanguageConfig.preferredLanguages,
     );
-    coverUrl = _mangaDexService.fetchCoverUrl(mangaId);
     checkFollowingStatus();
   }
 
+  /// Kiểm tra trạng thái theo dõi của người dùng với manga hiện tại.
   Future<void> checkFollowingStatus() async {
     try {
       final String? token = await SecureStorageService.getToken();
@@ -53,6 +54,7 @@ class MangaDetailLogic {
     }
   }
 
+  /// Thay đổi trạng thái theo dõi và thông báo tới người dùng.
   Future<void> toggleFollowStatus(BuildContext context) async {
     final String? token = await SecureStorageService.getToken();
     if (token == null) {
