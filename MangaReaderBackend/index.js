@@ -14,8 +14,7 @@ const requiredEnvVars = [
   'EMAIL_HOST',
   'EMAIL_PORT',
   'EMAIL_USER',
-  'EMAIL_PASS',
-  'EMAIL_FROM'
+  'EMAIL_PASS'
 ];
 requiredEnvVars.forEach(envVar => {
   if (!process.env[envVar]) {

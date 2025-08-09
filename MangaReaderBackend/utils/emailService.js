@@ -11,8 +11,12 @@ const sendEmail = async (options) => {
     },
   });
 
+  const resolvedFrom = (process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim() !== '')
+    ? process.env.EMAIL_FROM
+    : (process.env.EMAIL_USER ? `Manga Reader App <${process.env.EMAIL_USER}>` : undefined);
+
   const mailOptions = {
-    from: process.env.EMAIL_FROM,
+    from: resolvedFrom,
     to: options.email,
     subject: options.subject,
     text: options.message,
