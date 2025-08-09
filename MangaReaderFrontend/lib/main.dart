@@ -1,5 +1,6 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'app.dart';
 
 /// Điểm vào của ứng dụng.
@@ -7,5 +8,5 @@ import 'app.dart';
 /// Đảm bảo binding đã được khởi tạo trước khi chạy `MangaReaderApp`.
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MangaReaderApp());
+  runApp(const ProviderScope(child: MangaReaderApp()));
 }

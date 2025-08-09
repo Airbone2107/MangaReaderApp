@@ -8,10 +8,12 @@ part 'user_model.g.dart';
 abstract class User with _$User {
   const factory User({
     @JsonKey(name: '_id') required String id,
-    required String googleId,
+    String? googleId,
     required String email,
     required String displayName,
     String? photoURL,
+    required String authProvider,
+    required bool isVerified,
     @JsonKey(name: 'followingManga') required List<String> following,
     @JsonKey(name: 'readingManga')
     required List<ReadingProgress> readingProgress,

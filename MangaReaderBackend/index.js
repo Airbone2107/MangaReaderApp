@@ -7,7 +7,16 @@ const fs = require('fs');
 const path = require('path');
 
 // Kiểm tra các biến môi trường bắt buộc
-const requiredEnvVars = ['JWT_SECRET', 'GOOGLE_CLIENT_ID', 'DB_URI'];
+const requiredEnvVars = [
+  'JWT_SECRET', 
+  'GOOGLE_CLIENT_ID', 
+  'DB_URI',
+  'EMAIL_HOST',
+  'EMAIL_PORT',
+  'EMAIL_USER',
+  'EMAIL_PASS',
+  'EMAIL_FROM'
+];
 requiredEnvVars.forEach(envVar => {
   if (!process.env[envVar]) {
     console.error(`Error: ${envVar} is not defined in environment variables`);

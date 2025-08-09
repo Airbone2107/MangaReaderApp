@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:manga_reader_app/data/models/sort_manga_model.dart';
 import '../../../data/models/manga/tag.dart';
 import '../logic/search_logic.dart';
 
 /// Màn hình tìm kiếm nâng cao cho manga.
 class AdvancedSearchScreen extends StatefulWidget {
-  const AdvancedSearchScreen({super.key});
+  final SortManga? initialSortManga;
+  const AdvancedSearchScreen({super.key, this.initialSortManga});
 
   @override
   State<AdvancedSearchScreen> createState() => _AdvancedSearchScreenState();
@@ -16,11 +18,15 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   @override
   void initState() {
     super.initState();
-    _logic.init(context, () {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    _logic.init(
+      context,
+      () {
+        if (mounted) {
+          setState(() {});
+        }
+      },
+      initialSortManga: widget.initialSortManga,
+    );
   }
 
   @override
@@ -51,10 +57,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             label: 'Độ an toàn',
             items: const <String>[
               'Tất cả',
-              'safe',
-              'suggestive',
-              'erotica',
-              'pornographic',
+              'Safe',
+              'Suggestive',
+              'Erotica',
+              'Pornographic',
             ],
             value: _logic.safetyFilter,
             onChanged: (String? value) =>
@@ -64,10 +70,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             label: 'Tình trạng',
             items: const <String>[
               'Tất cả',
-              'ongoing',
-              'completed',
-              'hiatus',
-              'cancelled',
+              'Ongoing',
+              'Completed',
+              'Hiatus',
+              'Cancelled',
             ],
             value: _logic.statusFilter,
             onChanged: (String? value) =>
@@ -77,10 +83,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             label: 'Dành cho',
             items: const <String>[
               'Tất cả',
-              'shounen',
-              'shoujo',
-              'seinen',
-              'josei',
+              'Shounen',
+              'Shoujo',
+              'Seinen',
+              'Josei',
             ],
             value: _logic.demographicFilter,
             onChanged: (String? value) =>

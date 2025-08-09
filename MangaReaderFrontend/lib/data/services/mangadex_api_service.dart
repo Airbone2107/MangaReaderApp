@@ -32,12 +32,15 @@ class MangaDexApiService {
     int? limit,
     int? offset,
     SortManga? sortManga,
+    List<String>? includes,
   }) async {
     final Map<String, dynamic> params = <String, dynamic>{
-      'includes[]': 'cover_art',
       'hasAvailableChapters': '1',
       'hasUnavailableChapters': '0',
     };
+
+    final List<String> finalIncludes = <String>{'cover_art', ...?includes}.toList();
+    params['includes[]'] = finalIncludes;
 
     if (limit != null) {
       params['limit'] = limit.toString();

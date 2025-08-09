@@ -24,10 +24,28 @@ class SearchLogic {
   late VoidCallback refreshUI;
 
   /// Khởi tạo context và tải danh sách tags.
-  void init(BuildContext context, VoidCallback refreshUI) {
+  void init(
+    BuildContext context,
+    VoidCallback refreshUI, {
+    SortManga? initialSortManga,
+  }) {
     this.context = context;
     this.refreshUI = refreshUI;
+    if (initialSortManga != null) {
+      _applyInitialFilters(initialSortManga);
+    }
     _loadTags();
+  }
+
+  void _applyInitialFilters(SortManga filters) {
+    if (filters.publicationDemographic != null &&
+        filters.publicationDemographic!.isNotEmpty) {
+      demographicFilter = filters.publicationDemographic!.first;
+    }
+    if (filters.status != null && filters.status!.isNotEmpty) {
+      statusFilter = filters.status!.first;
+    }
+    refreshUI();
   }
 
   /// Tải, sắp xếp và lưu danh sách tags khả dụng.
@@ -105,10 +123,13 @@ class SearchLogic {
           : null,
       includedTags: selectedTags.isNotEmpty ? selectedTags.toList() : null,
       excludedTags: excludedTags.isNotEmpty ? excludedTags.toList() : null,
-      contentRating: safetyFilter != 'Tất cả' ? [safetyFilter] : null,
-      status: statusFilter != 'Tất cả' ? [statusFilter] : null,
+      contentRating:
+          safetyFilter != 'Tất cả' ? <String>[safetyFilter.toLowerCase()] : null,
+      status: statusFilter != 'Tất cả'
+          ? <String>[statusFilter.toLowerCase()]
+          : null,
       publicationDemographic: demographicFilter != 'Tất cả'
-          ? [demographicFilter]
+          ? <String>[demographicFilter.toLowerCase()]
           : null,
       order: _getSortOrder(),
     );

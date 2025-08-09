@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:manga_reader_app/features/auth/view/login_screen.dart';
+import 'package:manga_reader_app/features/auth/view/register_screen.dart';
 import '../../../data/models/user_model.dart';
 import '../logic/account_logic.dart';
 
@@ -46,17 +48,69 @@ class _AccountScreenState extends State<AccountScreen> {
     }
 
     if (_logic.user == null) {
-      return Center(
-        child: ElevatedButton(
-          onPressed: _logic.handleSignIn,
-          child: const Text('Đăng nhập bằng Google'),
-        ),
-      );
+      return _buildLoginOptions();
     }
-
     return RefreshIndicator(
       onRefresh: _logic.refreshUserData,
       child: _buildUserContent(),
+    );
+  }
+
+  /// Hiển thị các lựa chọn đăng nhập/đăng ký.
+  Widget _buildLoginOptions() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ElevatedButton(
+              onPressed: () async {
+                final bool? success = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+                if (success == true) {
+                  _logic.refreshUserData();
+                }
+              },
+              child: const Text('Đăng nhập bằng Email'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () {
+                 Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                );
+              },
+              child: const Text('Đăng ký tài khoản mới'),
+            ),
+            const SizedBox(height: 20),
+            const Row(
+              children: <Widget>[
+                Expanded(child: Divider()),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text('HOẶC'),
+                ),
+                Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              icon: Image.asset('assets/google_logo.png', height: 24.0),
+              label: const Text('Đăng nhập bằng Google'),
+              onPressed: _logic.handleGoogleSignIn,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -73,7 +127,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   backgroundImage: NetworkImage(_logic.user!.photoURL!),
                 )
               : CircleAvatar(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
                   child: Text(
                     _logic.user!.displayName.isNotEmpty
                         ? _logic.user!.displayName[0].toUpperCase()
@@ -86,12 +140,14 @@ class _AccountScreenState extends State<AccountScreen> {
           child: ListView(
             padding: const EdgeInsets.all(8.0),
             children: <Widget>[
-              _logic.buildMangaListView(
-                'Truyện Theo Dõi',
-                _logic.user!.following,
-                isFollowing: true,
-              ),
+              if (_logic.user != null)
+                _logic.buildMangaListView(
+                  'Truyện Theo Dõi',
+                  _logic.user!.following,
+                  isFollowing: true,
+                ),
               const SizedBox(height: 16),
+              if (_logic.user != null)
               _logic.buildMangaListView(
                 'Lịch Sử Đọc Truyện',
                 _logic.user!.readingProgress

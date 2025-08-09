@@ -23,6 +23,80 @@ class UserApiService {
   UserApiService({this.baseUrl = AppConfig.baseUrl, http.Client? client})
     : client = client ?? http.Client();
 
+  // --- NEW: Email/Password Methods ---
+
+  /// Đăng ký tài khoản mới bằng email.
+  Future<String> register(String displayName, String email, String password) async {
+    final response = await client.post(
+      Uri.parse('$baseUrl/api/users/register'),
+      headers: _buildHeaders(null),
+      body: jsonEncode({
+        'displayName': displayName,
+        'email': email,
+        'password': password,
+      }),
+    );
+
+    final dynamic body = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body['message'] as String;
+    } else {
+      throw HttpException((body['message'] as String?) ?? 'Đăng ký thất bại');
+    }
+  }
+
+  /// Đăng nhập bằng email và mật khẩu.
+  Future<void> login(String email, String password) async {
+    final response = await client.post(
+      Uri.parse('$baseUrl/api/users/login'),
+      headers: _buildHeaders(null),
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+
+    final dynamic body = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final String backendToken = body['token'] as String;
+      await SecureStorageService.saveToken(backendToken);
+      logger.i('Đăng nhập bằng email thành công.');
+    } else {
+      throw HttpException((body['message'] as String?) ?? 'Đăng nhập thất bại');
+    }
+  }
+
+  /// Gửi yêu cầu quên mật khẩu.
+  Future<String> forgotPassword(String email) async {
+    final response = await client.post(
+      Uri.parse('$baseUrl/api/users/forgot-password'),
+      headers: _buildHeaders(null),
+      body: jsonEncode({'email': email}),
+    );
+    
+    final dynamic body = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return body['message'] as String;
+    } else {
+      throw HttpException((body['message'] as String?) ?? 'Yêu cầu quên mật khẩu thất bại');
+    }
+  }
+
+  /// Đặt lại mật khẩu bằng mã và mật khẩu mới.
+  Future<String> resetPassword(String token, String newPassword) async {
+    final response = await client.post(
+      Uri.parse('$baseUrl/api/users/reset-password'),
+      headers: _buildHeaders(null),
+      body: jsonEncode({'token': token, 'newPassword': newPassword}),
+    );
+
+    final dynamic body = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return body['message'] as String;
+    } else {
+      throw HttpException((body['message'] as String?) ?? 'Đặt lại mật khẩu thất bại');
+    }
+  }
+
+  // --- Existing Methods ---
+
   /// Đăng nhập bằng Google và lưu token backend vào Secure Storage.
   Future<void> signInWithGoogle(GoogleSignInAccount googleUser) async {
     try {
@@ -73,6 +147,7 @@ class UserApiService {
     try {
       final String? token = await SecureStorageService.getToken();
       if (token == null) {
+        await SecureStorageService.clearAll();
         return;
       }
 
@@ -81,14 +156,15 @@ class UserApiService {
         headers: _buildHeaders(token),
       );
 
+      await SecureStorageService.clearAll();
       if (response.statusCode == 200) {
-        await SecureStorageService.removeToken();
         logger.i('Đăng xuất thành công.');
       } else {
-        throw const HttpException('Đăng xuất thất bại');
+        logger.w('Đăng xuất thất bại trên server, nhưng đã xoá token ở client.');
       }
     } catch (e, s) {
-      logger.e('Lỗi khi đăng xuất', error: e, stackTrace: s);
+      logger.e('Lỗi khi đăng xuất, vẫn xoá token ở client', error: e, stackTrace: s);
+      await SecureStorageService.clearAll();
       if (e is HttpException) {
         rethrow;
       }
@@ -111,11 +187,11 @@ class UserApiService {
       final Map<String, dynamic> userData =
           jsonDecode(response.body) as Map<String, dynamic>;
       return User.fromJson(userData);
-    } else if (response.statusCode == 403) {
+    } else if (response.statusCode == 401 || response.statusCode == 403) {
       logger.w(
-        'Lỗi 403 - Forbidden. Token có thể đã hết hạn hoặc không hợp lệ.',
+        'Lỗi ${response.statusCode} - Forbidden/Unauthorized. Token có thể đã hết hạn hoặc không hợp lệ.',
       );
-      throw const HttpException('403');
+      throw HttpException('${response.statusCode}');
     } else {
       logger.e(
         'Không thể lấy thông tin user. Mã lỗi: ${response.statusCode}',
@@ -202,7 +278,7 @@ class UserApiService {
           'Lỗi khi kiểm tra theo dõi',
           error: 'Status: ${response.statusCode}, Body: ${response.body}',
         );
-        throw HttpException('Lỗi khi kiểm tra theo dõi: ${response.body}');
+        return false;
       }
     } catch (e, s) {
       logger.e(
@@ -247,11 +323,14 @@ class UserApiService {
   }
 
   /// Xây dựng header kèm Bearer token cho các request yêu cầu xác thực.
-  Map<String, String> _buildHeaders(String token) {
-    return <String, String>{
+  Map<String, String> _buildHeaders(String? token) {
+    final headers = <String, String>{
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
     };
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
   }
 
   /// Lấy token hoặc ném lỗi nếu không tồn tại trong Secure Storage.

@@ -53,7 +53,7 @@ class AccountScreenLogic {
       }
     } catch (e, s) {
       user = null;
-      if (e is HttpException && e.message == '403') {
+      if (e is HttpException && (e.message == '403' || e.message == '401')) {
           logger.w('Token không hợp lệ, buộc đăng xuất.');
           await handleSignOut();
       }
@@ -65,22 +65,24 @@ class AccountScreenLogic {
   }
 
   /// Xử lý đăng nhập Google và đồng bộ dữ liệu người dùng.
-  Future<void> handleSignIn() async {
+  Future<void> handleGoogleSignIn() async {
     isLoading = true;
     refreshUI();
     try {
       final GoogleSignInAccount? account = await _googleSignIn.signIn();
       if (account == null) {
-        throw Exception('Đăng nhập bị hủy');
+        isLoading = false;
+        refreshUI();
+        return;
       }
       await _userService.signInWithGoogle(account);
       user = await _fetchUserData();
     } catch (error, s) {
-      logger.e('Lỗi đăng nhập', error: error, stackTrace: s);
+      logger.e('Lỗi đăng nhập Google', error: error, stackTrace: s);
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi đăng nhập: $error')));
+        ).showSnackBar(SnackBar(content: Text('Lỗi đăng nhập Google: $error')));
       }
       user = null;
     } finally {
@@ -93,8 +95,9 @@ class AccountScreenLogic {
   Future<void> handleSignOut() async {
     try {
       await _googleSignIn.signOut();
-      await SecureStorageService.removeToken();
+      await _userService.logout();
       user = null;
+      _mangaCache.clear();
       refreshUI();
     } catch (error) {
       if (context.mounted) {
@@ -169,10 +172,29 @@ class AccountScreenLogic {
     List<String> mangaIds, {
     bool isFollowing = false,
   }) {
+    if (mangaIds.isEmpty) {
+      return Card(
+        margin: const EdgeInsets.all(8),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text('Không có truyện nào.'),
+            ],
+          ),
+        ),
+      );
+    }
+
     return FutureBuilder<List<Manga>>(
       future: _getMangaListInfo(mangaIds),
       builder: (BuildContext context, AsyncSnapshot<List<Manga>> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting && _mangaCache.keys.where((k) => mangaIds.contains(k)).isEmpty) {
           return Card(
             child: ListTile(
               title: Text(title),
@@ -188,10 +210,11 @@ class AccountScreenLogic {
             ),
           );
         }
-        final List<Manga> mangas = snapshot.data ?? <Manga>[];
-        for (final Manga manga in mangas) {
-          _mangaCache[manga.id] = manga;
-        }
+        
+        final List<Manga> mangasFromIds = mangaIds
+            .map((id) => _mangaCache[id])
+            .whereType<Manga>()
+            .toList();
         return Card(
           margin: const EdgeInsets.all(8),
           child: Column(
@@ -210,22 +233,18 @@ class AccountScreenLogic {
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: mangaIds.length,
+                itemCount: mangasFromIds.length,
                 itemBuilder: (BuildContext context, int index) {
-                  final String mangaId = mangaIds[index];
-                  final Manga? manga = _mangaCache[mangaId];
-                  if (manga == null) {
-                    return const SizedBox.shrink();
-                  }
+                  final Manga manga = mangasFromIds[index];
                   String? lastReadChapter;
                   if (!isFollowing && user != null) {
                     final ReadingProgress progress = user!.readingProgress
                         .firstWhere(
-                          (ReadingProgress p) => p.mangaId == mangaId,
+                          (ReadingProgress p) => p.mangaId == manga.id,
                           orElse: () => ReadingProgress(
-                            mangaId: mangaId,
+                            mangaId: manga.id,
                             lastChapter: '',
-                            lastReadAt: DateTime.now(),
+                            lastReadAt: DateTime.fromMicrosecondsSinceEpoch(0),
                           ),
                         );
                     lastReadChapter = progress.lastChapter;
@@ -233,7 +252,7 @@ class AccountScreenLogic {
                   return _buildMangaListItem(
                     manga,
                     isFollowing: isFollowing,
-                    mangaId: mangaId,
+                    mangaId: manga.id,
                     lastReadChapter: lastReadChapter,
                   );
                 },
@@ -400,5 +419,7 @@ class AccountScreenLogic {
   }
 
   /// Giải phóng tài nguyên nếu cần.
-  void dispose() {}
+  void dispose() {
+    _userService.dispose();
+  }
 }
