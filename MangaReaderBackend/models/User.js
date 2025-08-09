@@ -73,6 +73,16 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+// Đảm bảo index unique cho googleId chỉ áp dụng khi field tồn tại và là string
+userSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { googleId: { $exists: true, $type: 'string' } },
+  }
+);
+
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);

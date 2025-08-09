@@ -60,7 +60,8 @@ app.get('/status', (req, res) => res.json({
   version: require('./package.json').version,
   uptime: process.uptime(),
   serverTime: new Date().toISOString(),
-  environment: process.env.NODE_ENV || 'development'
+  environment: process.env.NODE_ENV || 'development',
+  publicBaseUrl: process.env.PUBLIC_BASE_URL || 'https://manga-reader-app-backend.onrender.com'
 }));
 
 // Middleware xử lý lỗi

@@ -8,6 +8,7 @@ const sendEmail = require('../utils/emailService');
 const { JWT_SECRET, GOOGLE_CLIENT_ID } = process.env;
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://manga-reader-app-backend.onrender.com';
 
 // --- NEW: Email + Password Authentication ---
 
@@ -19,14 +20,14 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng cung cấp tên hiển thị, email và mật khẩu.' });
     }
 
-    const existingUser = await User.findOne({ email, authProvider: 'email' });
+    const existingUser = await User.findOne({ email: email.toLowerCase(), authProvider: 'email' });
     if (existingUser) {
       return res.status(409).json({ message: 'Một tài khoản với email này đã tồn tại.' });
     }
 
     const newUser = new User({
       displayName,
-      email,
+      email: email.toLowerCase(),
       password,
       authProvider: 'email',
     });
@@ -34,7 +35,7 @@ router.post('/register', async (req, res) => {
     const verificationToken = newUser.generateVerificationToken();
     await newUser.save();
 
-    const verificationURL = `http://localhost:3000/api/users/verify/${verificationToken}`;
+    const verificationURL = `${BASE_URL}/api/users/verify/${verificationToken}`;
     const message = `Chào mừng bạn đến với Manga Reader! Để hoàn tất đăng ký, vui lòng sử dụng liên kết sau để xác minh địa chỉ email của bạn. Liên kết này có hiệu lực trong 24 giờ.\n\n${verificationURL}\n\nNếu bạn không tạo tài khoản, vui lòng bỏ qua email này.`;
 
     try {
@@ -51,7 +52,7 @@ router.post('/register', async (req, res) => {
     }
   } catch (error) {
     console.error('Lỗi đăng ký:', error);
-    res.status(500).json({ message: 'Đã xảy ra lỗi trong quá trình đăng ký.', error: error.message });
+    res.status(500).json({ message: `Đã xảy ra lỗi trong quá trình đăng ký: ${error.message}` });
   }
 });
 
@@ -206,7 +207,7 @@ router.post('/auth/google', async (req, res) => {
     if (!user) {
       user = new User({
         googleId,
-        email,
+        email: (email || '').toLowerCase(),
         displayName: name,
         photoURL: picture,
         authProvider: 'google',
