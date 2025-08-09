@@ -65,6 +65,14 @@ class _AccountScreenState extends State<AccountScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Image.asset(
+                'assets/logo.png',
+                height: 120,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
                 final bool? success = await Navigator.push<bool>(

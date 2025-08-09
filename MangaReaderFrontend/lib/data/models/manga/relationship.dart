@@ -9,6 +9,7 @@ abstract class Relationship with _$Relationship {
   const factory Relationship({
     required String id,
     required String type,
+    String? related,
     Map<String, dynamic>? attributes,
   }) = _Relationship;
 

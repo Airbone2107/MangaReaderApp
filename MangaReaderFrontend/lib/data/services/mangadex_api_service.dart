@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:manga_reader_app/data/models/manga/manga_statistics.dart';
 import '../../utils/logger.dart';
 import '../models/manga/list_response.dart';
 import '../models/manga/manga.dart';
@@ -56,7 +58,19 @@ class MangaDexApiService {
     final Uri uri = Uri.parse(
       '$baseUrl/manga',
     ).replace(queryParameters: params);
-    final http.Response response = await _client.get(uri);
+    http.Response response;
+    try {
+      response = await _client.get(uri);
+    } catch (e) {
+      final message = e.toString();
+      if (message.contains('Connection closed before full header was received')) {
+        // Retry sau 5s một lần
+        await Future.delayed(const Duration(seconds: 5));
+        response = await _client.get(uri);
+      } else {
+        rethrow;
+      }
+    }
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data =
@@ -79,7 +93,7 @@ class MangaDexApiService {
   /// Lấy chi tiết một manga theo `mangaId`.
   Future<Manga> fetchMangaDetails(String mangaId) async {
     final Map<String, dynamic> params = <String, dynamic>{
-      'includes[]': ['author', 'cover_art']
+      'includes[]': ['author', 'artist', 'cover_art']
     };
     final Uri uri = Uri.parse(
       '$baseUrl/manga/$mangaId',
@@ -93,6 +107,25 @@ class MangaDexApiService {
     } else {
       logError('fetchMangaDetails', response);
       throw Exception('Lỗi khi tải chi tiết manga');
+    }
+  }
+
+  /// Lấy thông tin thống kê của một manga.
+  Future<MangaStatisticsData> fetchMangaStatistics(String mangaId) async {
+    final uri = Uri.parse('$baseUrl/statistics/manga/$mangaId');
+    final response = await _client.get(uri);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final statsResponse = MangaStatisticsResponse.fromJson(data);
+      if (statsResponse.statistics.containsKey(mangaId)) {
+        return statsResponse.statistics[mangaId]!;
+      } else {
+        throw Exception('Không tìm thấy thống kê cho manga ID: $mangaId');
+      }
+    } else {
+      logError('fetchMangaStatistics', response);
+      throw Exception('Lỗi khi tải thống kê manga: ${response.statusCode}');
     }
   }
 

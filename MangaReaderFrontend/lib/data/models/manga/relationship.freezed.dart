@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Relationship {
 
- String get id; String get type; Map<String, dynamic>? get attributes;
+ String get id; String get type; String? get related; Map<String, dynamic>? get attributes;
 /// Create a copy of Relationship
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $RelationshipCopyWith<Relationship> get copyWith => _$RelationshipCopyWithImpl<R
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Relationship&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other.attributes, attributes));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Relationship&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.related, related) || other.related == related)&&const DeepCollectionEquality().equals(other.attributes, attributes));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,const DeepCollectionEquality().hash(attributes));
+int get hashCode => Object.hash(runtimeType,id,type,related,const DeepCollectionEquality().hash(attributes));
 
 @override
 String toString() {
-  return 'Relationship(id: $id, type: $type, attributes: $attributes)';
+  return 'Relationship(id: $id, type: $type, related: $related, attributes: $attributes)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $RelationshipCopyWith<$Res>  {
   factory $RelationshipCopyWith(Relationship value, $Res Function(Relationship) _then) = _$RelationshipCopyWithImpl;
 @useResult
 $Res call({
- String id, String type, Map<String, dynamic>? attributes
+ String id, String type, String? related, Map<String, dynamic>? attributes
 });
 
 
@@ -65,11 +65,12 @@ class _$RelationshipCopyWithImpl<$Res>
 
 /// Create a copy of Relationship
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? attributes = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? related = freezed,Object? attributes = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
-as String,attributes: freezed == attributes ? _self.attributes : attributes // ignore: cast_nullable_to_non_nullable
+as String,related: freezed == related ? _self.related : related // ignore: cast_nullable_to_non_nullable
+as String?,attributes: freezed == attributes ? _self.attributes : attributes // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,
   ));
 }
@@ -155,10 +156,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  Map<String, dynamic>? attributes)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String? related,  Map<String, dynamic>? attributes)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Relationship() when $default != null:
-return $default(_that.id,_that.type,_that.attributes);case _:
+return $default(_that.id,_that.type,_that.related,_that.attributes);case _:
   return orElse();
 
 }
@@ -176,10 +177,10 @@ return $default(_that.id,_that.type,_that.attributes);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  Map<String, dynamic>? attributes)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String? related,  Map<String, dynamic>? attributes)  $default,) {final _that = this;
 switch (_that) {
 case _Relationship():
-return $default(_that.id,_that.type,_that.attributes);case _:
+return $default(_that.id,_that.type,_that.related,_that.attributes);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -196,10 +197,10 @@ return $default(_that.id,_that.type,_that.attributes);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  Map<String, dynamic>? attributes)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String? related,  Map<String, dynamic>? attributes)?  $default,) {final _that = this;
 switch (_that) {
 case _Relationship() when $default != null:
-return $default(_that.id,_that.type,_that.attributes);case _:
+return $default(_that.id,_that.type,_that.related,_that.attributes);case _:
   return null;
 
 }
@@ -211,11 +212,12 @@ return $default(_that.id,_that.type,_that.attributes);case _:
 @JsonSerializable()
 
 class _Relationship implements Relationship {
-  const _Relationship({required this.id, required this.type, final  Map<String, dynamic>? attributes}): _attributes = attributes;
+  const _Relationship({required this.id, required this.type, this.related, final  Map<String, dynamic>? attributes}): _attributes = attributes;
   factory _Relationship.fromJson(Map<String, dynamic> json) => _$RelationshipFromJson(json);
 
 @override final  String id;
 @override final  String type;
+@override final  String? related;
  final  Map<String, dynamic>? _attributes;
 @override Map<String, dynamic>? get attributes {
   final value = _attributes;
@@ -239,16 +241,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Relationship&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other._attributes, _attributes));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Relationship&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.related, related) || other.related == related)&&const DeepCollectionEquality().equals(other._attributes, _attributes));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,const DeepCollectionEquality().hash(_attributes));
+int get hashCode => Object.hash(runtimeType,id,type,related,const DeepCollectionEquality().hash(_attributes));
 
 @override
 String toString() {
-  return 'Relationship(id: $id, type: $type, attributes: $attributes)';
+  return 'Relationship(id: $id, type: $type, related: $related, attributes: $attributes)';
 }
 
 
@@ -259,7 +261,7 @@ abstract mixin class _$RelationshipCopyWith<$Res> implements $RelationshipCopyWi
   factory _$RelationshipCopyWith(_Relationship value, $Res Function(_Relationship) _then) = __$RelationshipCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String type, Map<String, dynamic>? attributes
+ String id, String type, String? related, Map<String, dynamic>? attributes
 });
 
 
@@ -276,11 +278,12 @@ class __$RelationshipCopyWithImpl<$Res>
 
 /// Create a copy of Relationship
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? attributes = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? related = freezed,Object? attributes = freezed,}) {
   return _then(_Relationship(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
-as String,attributes: freezed == attributes ? _self._attributes : attributes // ignore: cast_nullable_to_non_nullable
+as String,related: freezed == related ? _self.related : related // ignore: cast_nullable_to_non_nullable
+as String?,attributes: freezed == attributes ? _self._attributes : attributes // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,
   ));
 }

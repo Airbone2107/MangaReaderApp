@@ -106,18 +106,23 @@ class DiscoverSection extends HookWidget {
               child: Column(
                 key: carouselKey,
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Padding(
                     padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-                    child: Text(
-                      'Truyện mới cập nhật',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Builder(
+                      builder: (context) {
+                        final tabStyle = Theme.of(context)
+                                .tabBarTheme
+                                .labelStyle ??
+                            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
+                        return Text(
+                          'Truyện mới cập nhật',
+                          style: tabStyle,
+                        );
+                      },
                     ),
                   ),
-                  Padding(
+                  const Padding(
                     padding: EdgeInsets.only(bottom: 4),
                     child: TopFollowedCarousel(),
                   ),
@@ -154,11 +159,21 @@ class DiscoverSection extends HookWidget {
             ),
           ];
         },
-        body: TabBarView(
-          controller: tabController,
-          children: tabs.values
-              .map((SortManga sortManga) => TabContentView(sortManga: sortManga))
-              .toList(),
+        body: AnimatedBuilder(
+          animation: tabController,
+          builder: (context, _) {
+            final current = tabController.index;
+            final values = tabs.values.toList(growable: false);
+            return TabBarView(
+              controller: tabController,
+              children: List.generate(values.length, (i) {
+                return TabContentView(
+                  sortManga: values[i],
+                  isActive: i == current,
+                );
+              }),
+            );
+          },
         ),
       ),
     );

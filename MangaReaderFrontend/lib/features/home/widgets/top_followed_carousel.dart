@@ -13,7 +13,9 @@ class TopFollowedCarousel extends ConsumerStatefulWidget {
 }
 
 class _TopFollowedCarouselState extends ConsumerState<TopFollowedCarousel> {
-  final PageController _pageController = PageController(viewportFraction: 0.9);
+  // Dùng initialPage lớn để cho phép kéo vòng lặp cả hai chiều
+  final PageController _pageController =
+      PageController(viewportFraction: 0.9, initialPage: 10000);
 
   @override
   void dispose() {
@@ -25,7 +27,7 @@ class _TopFollowedCarouselState extends ConsumerState<TopFollowedCarousel> {
   Widget build(BuildContext context) {
     final asyncMangas = ref.watch(topDailyFollowedMangaProvider);
     return asyncMangas.when(
-      data: (mangas) => _buildCarousel(context, mangas),
+      data: (mangas) => _buildCarousel(context, mangas.take(10).toList()),
       loading: () => const SizedBox(
         height: 210,
         child: Center(child: CircularProgressIndicator()),
@@ -81,7 +83,7 @@ class _CarouselCard extends StatelessWidget {
     final List<String> tags = manga.attributes.tags
         .map((t) => t.attributes.name['en'] ?? '')
         .where((e) => e.isNotEmpty)
-        .take(3)
+        .take(2)
         .toList();
 
     return GestureDetector(
@@ -169,6 +171,7 @@ class _CarouselCard extends StatelessWidget {
                                   child: Text(
                                     tag,
                                     style: const TextStyle(fontSize: 11),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ))
                             .toList(),

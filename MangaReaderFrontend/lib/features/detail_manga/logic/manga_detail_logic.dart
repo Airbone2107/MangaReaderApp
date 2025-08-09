@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:manga_reader_app/config/language_config.dart';
+import 'package:manga_reader_app/data/models/manga/manga_statistics.dart';
 import '../../../data/models/manga/manga.dart';
 import '../../../data/services/mangadex_api_service.dart';
 import '../../../data/services/user_api_service.dart';
@@ -14,7 +15,7 @@ class MangaDetailLogic {
   final MangaDexApiService _mangaDexService = MangaDexApiService();
   final UserApiService _userApiService = UserApiService();
 
-  late Future<Manga> mangaDetails;
+  late Future<(Manga, MangaStatisticsData)> pageData;
   /// Danh sách chapter dạng raw theo ngôn ngữ (giữ nguyên vì model chưa hoàn thiện).
   late Future<List<dynamic>> chapters;
   bool isFollowing = false;
@@ -25,12 +26,26 @@ class MangaDetailLogic {
 
   /// Khởi tạo dữ liệu ban đầu.
   void _init() {
-    mangaDetails = _mangaDexService.fetchMangaDetails(mangaId);
+    pageData = _fetchPageData();
     chapters = _mangaDexService.fetchChapters(
       mangaId,
       LanguageConfig.preferredLanguages,
     );
     checkFollowingStatus();
+  }
+
+  /// Tải đồng thời chi tiết manga và thống kê.
+  Future<(Manga, MangaStatisticsData)> _fetchPageData() async {
+    try {
+      final results = await Future.wait([
+        _mangaDexService.fetchMangaDetails(mangaId),
+        _mangaDexService.fetchMangaStatistics(mangaId),
+      ]);
+      return (results[0] as Manga, results[1] as MangaStatisticsData);
+    } catch (e, s) {
+      logger.e('Lỗi khi tải dữ liệu trang chi tiết', error: e, stackTrace: s);
+      rethrow;
+    }
   }
 
   /// Kiểm tra trạng thái theo dõi của người dùng với manga hiện tại.

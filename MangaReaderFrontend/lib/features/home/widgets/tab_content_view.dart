@@ -11,10 +11,22 @@ import '../../../utils/manga_helper.dart';
 
 class TabContentView extends ConsumerWidget {
   final SortManga sortManga;
-  const TabContentView({super.key, required this.sortManga});
+  final bool isActive;
+  const TabContentView({super.key, required this.sortManga, required this.isActive});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!isActive) {
+      return CustomScrollView(
+        slivers: [
+          SliverOverlapInjector(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+          ),
+          const SliverToBoxAdapter(child: SizedBox.shrink()),
+        ],
+      );
+    }
+
     final mangaListAsync = ref.watch(tabContentProvider(sortManga));
 
     return mangaListAsync.when(
