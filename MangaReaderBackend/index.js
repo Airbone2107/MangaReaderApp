@@ -45,8 +45,8 @@ app.use((req, res, next) => {
 });
 
 // Kết nối MongoDB
-mongoose.connect(process.env.DB_URI, { dbName: 'NhatDex_UserDB' })
-  .then(() => console.log('Đã kết nối với MongoDB - Database: NhatDex_UserDB'))
+mongoose.connect(process.env.DB_URI, { dbName: 'MangaReaderApp' })
+  .then(() => console.log('Đã kết nối với MongoDB - Database: MangaReaderApp'))
   .catch(error => console.error('Lỗi kết nối MongoDB:', error));
 
 // Routes

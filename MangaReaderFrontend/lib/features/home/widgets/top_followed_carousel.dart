@@ -1,10 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:manga_reader_app/data/models/manga/manga.dart';
-import 'package:manga_reader_app/features/detail_manga/view/manga_detail_screen.dart';
-import 'package:manga_reader_app/features/home/logic/home_providers.dart';
-import 'package:manga_reader_app/utils/manga_helper.dart';
+import '../../../data/models/manga/manga.dart';
+import '../../detail_manga/view/manga_detail_screen.dart';
+import '../logic/home_providers.dart';
+import '../../../utils/manga_helper.dart';
 class TopFollowedCarousel extends ConsumerStatefulWidget {
   const TopFollowedCarousel({super.key});
 
@@ -34,7 +34,26 @@ class _TopFollowedCarouselState extends ConsumerState<TopFollowedCarousel> {
       ),
       error: (err, _) => SizedBox(
         height: 210,
-        child: Center(child: Text('Lỗi tải carousel: $err')),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Đã xảy ra lỗi khi tải. Vui lòng thử lại.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Gọi lại provider để tải dữ liệu
+                  ref.invalidate(topDailyFollowedMangaProvider);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Tải lại'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

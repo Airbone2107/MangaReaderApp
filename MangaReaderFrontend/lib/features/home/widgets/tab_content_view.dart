@@ -124,7 +124,26 @@ class TabContentView extends ConsumerWidget {
         ],
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Lỗi: $err')),
+      error: (err, stack) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Đã xảy ra lỗi khi tải. Vui lòng thử lại.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: () {
+                // Làm mới provider theo tham số để gọi lại API
+                ref.invalidate(tabContentProvider(sortManga));
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tải lại'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

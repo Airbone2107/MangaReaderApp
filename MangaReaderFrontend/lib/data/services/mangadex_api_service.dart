@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import 'package:manga_reader_app/data/models/author.dart';
-import 'package:manga_reader_app/data/models/manga/manga_statistics.dart';
+import '../models/author.dart';
+import '../models/manga/manga_statistics.dart';
 import '../../utils/logger.dart';
 import '../models/manga/list_response.dart';
 import '../models/manga/manga.dart';
@@ -174,6 +174,9 @@ class MangaDexApiService {
       );
     }
     
+    // Luôn yêu cầu thông tin nhóm dịch và người đăng
+    final includes = ['scanlation_group', 'user'];
+
     // Nếu có limit, chỉ cần gọi API một lần với limit đó.
     if (limit != null) {
       final queryParameters = <String, dynamic>{
@@ -181,6 +184,7 @@ class MangaDexApiService {
         'offset': '0',
         'order[chapter]': order,
         'translatedLanguage[]': validLanguages,
+        'includes[]': includes,
       };
       final uri = Uri.parse('$baseUrl/manga/$mangaId/feed')
           .replace(queryParameters: queryParameters);
@@ -200,7 +204,7 @@ class MangaDexApiService {
     // Logic cũ để tải tất cả chapter (phân trang)
     final List<dynamic> allChapters = <dynamic>[];
     int offset = 0;
-    const int pageSize = 100;
+    const int pageSize = 500; // Tăng pagesize để giảm số lần gọi API
 
     while (true) {
       final Map<String, dynamic> queryParameters = <String, dynamic>{
@@ -208,6 +212,7 @@ class MangaDexApiService {
         'offset': offset.toString(),
         'order[chapter]': order,
         'translatedLanguage[]': validLanguages,
+        'includes[]': includes,
       };
 
       final Uri uri = Uri.parse('$baseUrl/manga/$mangaId/feed')
@@ -218,12 +223,14 @@ class MangaDexApiService {
         final Map<String, dynamic> data =
             jsonDecode(response.body) as Map<String, dynamic>;
         final List<dynamic> chapters = data['data'] as List<dynamic>;
-
-        if (chapters.isEmpty) {
-          break; // Không còn chapter nào nữa
-        }
+        final int total = (data['total'] as num?)?.toInt() ?? 0;
 
         allChapters.addAll(chapters);
+
+        if (allChapters.length >= total) {
+          break; // Đã tải đủ
+        }
+
         offset += pageSize;
       } else if (response.statusCode == 503) {
         throw Exception(

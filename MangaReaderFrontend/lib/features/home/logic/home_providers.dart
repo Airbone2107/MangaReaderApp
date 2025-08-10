@@ -17,6 +17,7 @@ final topDailyFollowedMangaProvider = FutureProvider<List<Manga>>((ref) async {
     limit: 10,
     includes: <String>['tag'],
     sortManga: MangaSearchQuery(
+      contentRating: const <String>['safe', 'suggestive'],
       order: <String, SortOrder>{'followedCount': SortOrder.desc},
       updatedAtSince: formattedDate,
     ),
@@ -33,6 +34,7 @@ final topWeeklyMangaProvider = FutureProvider<List<Manga>>((ref) async {
     limit: 10,
     includes: <String>['tag'],
     sortManga: MangaSearchQuery(
+      contentRating: const <String>['safe', 'suggestive'],
       order: <String, SortOrder>{'followedCount': SortOrder.desc},
       updatedAtSince: formattedDate,
     ),
@@ -50,6 +52,7 @@ final topMonthlyMangaProvider = FutureProvider<List<Manga>>((ref) async {
     limit: 10,
     includes: <String>['tag'],
     sortManga: MangaSearchQuery(
+      contentRating: const <String>['safe', 'suggestive'],
       order: <String, SortOrder>{'followedCount': SortOrder.desc},
       updatedAtSince: formattedDate,
     ),
@@ -63,6 +66,7 @@ final recentlyUpdatedMangaProvider = FutureProvider<List<Manga>>((ref) async {
     limit: 10,
     includes: <String>['tag'],
     sortManga: MangaSearchQuery(
+      contentRating: const <String>['safe', 'suggestive'],
       order: <String, SortOrder>{'latestUploadedChapter': SortOrder.desc},
     ),
   );
@@ -72,9 +76,17 @@ final recentlyUpdatedMangaProvider = FutureProvider<List<Manga>>((ref) async {
 final tabContentProvider =
     FutureProvider.family<List<Manga>, MangaSearchQuery>((ref, sortManga) async {
   final api = ref.watch(mangaDexApiServiceProvider);
+  // Đảm bảo tab nào cũng giới hạn nội dung ở safe + suggestive nếu chưa chỉ định
+  final MangaSearchQuery enforcedQuery = (sortManga.contentRating == null ||
+          (sortManga.contentRating?.isEmpty ?? true))
+      ? sortManga.copyWith(
+          contentRating: const <String>['safe', 'suggestive'],
+        )
+      : sortManga;
+
   return api.fetchManga(
     limit: 21,
-    sortManga: sortManga,
+    sortManga: enforcedQuery,
   );
 });
 

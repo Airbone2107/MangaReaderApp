@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:manga_reader_app/core/services/language_service.dart';
-import 'package:manga_reader_app/data/models/manga/manga.dart';
-import 'package:manga_reader_app/data/models/manga/relationship.dart';
+import '../../../core/services/language_service.dart';
+import '../../../data/models/manga/manga.dart';
+import '../../../data/models/manga/relationship.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../config/google_signin_config.dart';
 import '../../../data/models/chapter_model.dart';
@@ -413,7 +413,7 @@ class AccountScreenLogic {
                     if (timeText != null) ...[
                       const SizedBox(width: 8),
                       Text(
-                        timeText!,
+                        timeText,
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,

@@ -21,6 +21,12 @@ class ChapterReaderLogic {
   double lastOffset = 0.0;
   double scrollThreshold = 50.0;
 
+  /// Chế độ đọc: dọc hoặc ngang.
+  ReadingMode readingMode = ReadingMode.vertical;
+
+  /// Chế độ scale ảnh: theo chiều ngang hoặc chiều dọc.
+  ImageScaleMode scaleMode = ImageScaleMode.fitWidth;
+
   ChapterReaderLogic({
     required this.setState,
     required this.userService,
@@ -231,5 +237,14 @@ class ChapterReaderLogic {
     scrollController.removeListener(_onScroll);
   }
 }
+
+/// Enum biểu thị chế độ đọc.
+enum ReadingMode { vertical, horizontal }
+
+/// Enum biểu thị chế độ scale ảnh.
+/// - fitWidth: vừa theo bề ngang màn hình
+/// - fitHeight: vừa theo chiều dọc màn hình
+/// - fitContain: vừa cả hai chiều, ưu tiên chạm một trong hai cạnh (BoxFit.contain)
+enum ImageScaleMode { fitWidth, fitHeight }
 
 

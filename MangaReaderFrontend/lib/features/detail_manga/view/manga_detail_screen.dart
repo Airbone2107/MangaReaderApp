@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:manga_reader_app/data/models/manga/manga_statistics.dart';
-import 'package:manga_reader_app/features/detail_manga/widgets/chapters_tab.dart';
-import 'package:manga_reader_app/features/detail_manga/widgets/manga_info_tab.dart';
-import 'package:manga_reader_app/features/detail_manga/widgets/related_manga_tab.dart';
+import '../../../data/models/manga/manga_statistics.dart';
+import '../widgets/chapters_tab.dart';
+import '../widgets/manga_info_tab.dart';
+import '../widgets/related_manga_tab.dart';
 import '../../../data/models/manga/manga.dart';
 import '../logic/manga_detail_logic.dart';
 

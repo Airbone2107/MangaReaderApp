@@ -17,11 +17,30 @@ class DiscoverSection extends HookWidget {
     final carouselKey = useMemoized(() => GlobalKey(), const []);
 
     final tabs = <String, MangaSearchQuery>{
-      'Theo Dõi': MangaSearchQuery(order: <String, SortOrder>{'followedCount': SortOrder.desc}),
-      'Manga': MangaSearchQuery(originalLanguage: <String>['ja'], order: <String, SortOrder>{'rating': SortOrder.desc}),
-      'Manhwa': MangaSearchQuery(originalLanguage: <String>['ko'], order: <String, SortOrder>{'rating': SortOrder.desc}),
-      'Manhua': MangaSearchQuery(originalLanguage: <String>['zh'], order: <String, SortOrder>{'rating': SortOrder.desc}),
-      'Hoàn Thành': MangaSearchQuery(status: <String>['completed'], order: <String, SortOrder>{'rating': SortOrder.desc}),
+      'Nổi Bật': MangaSearchQuery(
+        contentRating: const <String>['safe', 'suggestive'],
+        order: <String, SortOrder>{'followedCount': SortOrder.desc},
+      ),
+      'Manga': MangaSearchQuery(
+        contentRating: const <String>['safe', 'suggestive'],
+        originalLanguage: <String>['ja'],
+        order: <String, SortOrder>{'rating': SortOrder.desc},
+      ),
+      'Manhwa': MangaSearchQuery(
+        contentRating: const <String>['safe', 'suggestive'],
+        originalLanguage: <String>['ko'],
+        order: <String, SortOrder>{'rating': SortOrder.desc},
+      ),
+      'Manhua': MangaSearchQuery(
+        contentRating: const <String>['safe', 'suggestive'],
+        originalLanguage: <String>['zh'],
+        order: <String, SortOrder>{'rating': SortOrder.desc},
+      ),
+      'Hoàn Thành': MangaSearchQuery(
+        contentRating: const <String>['safe', 'suggestive'],
+        status: <String>['completed'],
+        order: <String, SortOrder>{'rating': SortOrder.desc},
+      ),
     };
 
     double _heightOf(GlobalKey key) {
@@ -64,7 +83,10 @@ class DiscoverSection extends HookWidget {
         context,
         MaterialPageRoute(
           builder: (BuildContext context) => MangaListSearch(
-            sortManga: MangaSearchQuery(title: query),
+            sortManga: MangaSearchQuery(
+              title: query,
+              contentRating: const <String>['safe', 'suggestive'],
+            ),
           ),
         ),
       );

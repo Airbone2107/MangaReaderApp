@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:manga_reader_app/data/services/user_api_service.dart';
-import 'package:manga_reader_app/features/auth/view/forgot_password_screen.dart';
-import 'package:manga_reader_app/features/auth/view/register_screen.dart';
+import '../../../data/services/user_api_service.dart';
+import 'forgot_password_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

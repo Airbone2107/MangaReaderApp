@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:manga_reader_app/features/auth/view/login_screen.dart';
-import 'package:manga_reader_app/features/auth/view/register_screen.dart';
+import '../../auth/view/login_screen.dart';
+import '../../auth/view/register_screen.dart';
 import '../logic/account_logic.dart';
 
 /// Màn hình quản lý tài khoản người dùng.

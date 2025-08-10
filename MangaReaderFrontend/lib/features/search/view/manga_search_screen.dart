@@ -41,6 +41,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   void initState() {
     super.initState();
     _searchQuery = widget.initialFilters?.copyWith() ?? MangaSearchQuery();
+    // Loại bỏ giá trị 'pornographic' nếu có trong bộ lọc khởi tạo
+    _searchQuery.contentRating = _searchQuery.contentRating
+        ?.where((e) => e != 'pornographic')
+        .toList();
     _initializeFields();
     _loadTags();
   }
@@ -85,6 +89,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     _searchQuery.year = int.tryParse(_yearController.text.trim());
     _searchQuery.authors = _selectedAuthors.map((a) => a.id).toList();
     _searchQuery.artists = _selectedArtists.map((a) => a.id).toList();
+    // Đảm bảo không gửi 'pornographic' lên API
+    _searchQuery.contentRating = (_searchQuery.contentRating ?? const <String>[])
+        .where((e) => e != 'pornographic')
+        .toList();
 
     Navigator.push(
       context,
@@ -159,6 +167,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 _searchQuery.status = currentStatus;
               });
             },
+            displayText: _statusLabelVi,
           ),
           _buildMultiSelectChipGroup(
             'Đối tượng',
@@ -178,8 +187,8 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             },
           ),
           _buildMultiSelectChipGroup(
-            'Đánh giá nội dung',
-            ['safe', 'suggestive', 'erotica', 'pornographic'],
+            'Mức độ nội dung',
+            ['safe', 'suggestive', 'erotica'],
             _searchQuery.contentRating ?? [],
             (selected, value) {
               setState(() {
@@ -192,6 +201,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                 _searchQuery.contentRating = currentRating;
               });
             },
+            displayText: _contentRatingLabelVi,
           ),
           _buildTagsSection(),
         ],
@@ -278,8 +288,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     );
   }
 
-  Widget _buildMultiSelectChipGroup(String title, List<String> options,
-      List<String> selectedValues, Function(bool, String) onSelected) {
+  Widget _buildMultiSelectChipGroup(
+      String title,
+      List<String> options,
+      List<String> selectedValues,
+      Function(bool, String) onSelected,
+      {String Function(String option)? displayText}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -291,7 +305,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
           spacing: 8.0,
           children: options.map((option) {
             return FilterChip(
-              label: Text(option[0].toUpperCase() + option.substring(1)),
+              label: Text(
+                displayText?.call(option) ??
+                    (option.isNotEmpty
+                        ? option[0].toUpperCase() + option.substring(1)
+                        : option),
+              ),
               selected: selectedValues.contains(option),
               showCheckmark: false,
               selectedColor: Colors.green.withOpacity(0.3),
@@ -301,6 +320,36 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
         ),
       ],
     );
+  }
+
+  // Dịch nhãn hiển thị cho Trạng thái
+  String _statusLabelVi(String option) {
+    switch (option) {
+      case 'ongoing':
+        return 'Đang ra';
+      case 'completed':
+        return 'Hoàn thành';
+      case 'hiatus':
+        return 'Tạm dừng';
+      case 'cancelled':
+        return 'Bị hủy';
+      default:
+        return option;
+    }
+  }
+
+  // Dịch nhãn hiển thị cho Mức độ nội dung
+  String _contentRatingLabelVi(String option) {
+    switch (option) {
+      case 'safe':
+        return 'An toàn';
+      case 'suggestive':
+        return 'Nhạy cảm';
+      case 'erotica':
+        return 'R16';
+      default:
+        return option;
+    }
   }
 
   Widget _buildTagsSection() {
