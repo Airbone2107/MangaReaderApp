@@ -1,4 +1,3 @@
-// lib/features/chapter_reader/view/chapter_reader_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../data/models/chapter_model.dart';
@@ -33,7 +32,7 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
       scrollController: _scrollController,
     );
 
-    _logic.updateProgress(widget.chapter.mangaId, widget.chapter.chapterId);
+    _logic.updateProgress(widget.chapter);
     _chapterPages = _logic.fetchChapterPages(widget.chapter.chapterId);
     _checkFollowingStatus();
   }
@@ -201,3 +200,5 @@ class _ChapterReaderScreenState extends State<ChapterReaderScreen> {
     );
   }
 }
+
+

@@ -317,7 +317,7 @@ as DateTime,
 /// @nodoc
 mixin _$ReadingProgress {
 
- String get mangaId; String get lastChapter; DateTime get lastReadAt;@JsonKey(name: '_id') String? get id;
+ String get mangaId; ChapterInfo get lastReadChapter; DateTime get lastReadAt;@JsonKey(name: '_id') String? get id;
 /// Create a copy of ReadingProgress
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -330,16 +330,16 @@ $ReadingProgressCopyWith<ReadingProgress> get copyWith => _$ReadingProgressCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReadingProgress&&(identical(other.mangaId, mangaId) || other.mangaId == mangaId)&&(identical(other.lastChapter, lastChapter) || other.lastChapter == lastChapter)&&(identical(other.lastReadAt, lastReadAt) || other.lastReadAt == lastReadAt)&&(identical(other.id, id) || other.id == id));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReadingProgress&&(identical(other.mangaId, mangaId) || other.mangaId == mangaId)&&(identical(other.lastReadChapter, lastReadChapter) || other.lastReadChapter == lastReadChapter)&&(identical(other.lastReadAt, lastReadAt) || other.lastReadAt == lastReadAt)&&(identical(other.id, id) || other.id == id));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,mangaId,lastChapter,lastReadAt,id);
+int get hashCode => Object.hash(runtimeType,mangaId,lastReadChapter,lastReadAt,id);
 
 @override
 String toString() {
-  return 'ReadingProgress(mangaId: $mangaId, lastChapter: $lastChapter, lastReadAt: $lastReadAt, id: $id)';
+  return 'ReadingProgress(mangaId: $mangaId, lastReadChapter: $lastReadChapter, lastReadAt: $lastReadAt, id: $id)';
 }
 
 
@@ -350,11 +350,11 @@ abstract mixin class $ReadingProgressCopyWith<$Res>  {
   factory $ReadingProgressCopyWith(ReadingProgress value, $Res Function(ReadingProgress) _then) = _$ReadingProgressCopyWithImpl;
 @useResult
 $Res call({
- String mangaId, String lastChapter, DateTime lastReadAt,@JsonKey(name: '_id') String? id
+ String mangaId, ChapterInfo lastReadChapter, DateTime lastReadAt,@JsonKey(name: '_id') String? id
 });
 
 
-
+$ChapterInfoCopyWith<$Res> get lastReadChapter;
 
 }
 /// @nodoc
@@ -367,16 +367,25 @@ class _$ReadingProgressCopyWithImpl<$Res>
 
 /// Create a copy of ReadingProgress
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? mangaId = null,Object? lastChapter = null,Object? lastReadAt = null,Object? id = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? mangaId = null,Object? lastReadChapter = null,Object? lastReadAt = null,Object? id = freezed,}) {
   return _then(_self.copyWith(
 mangaId: null == mangaId ? _self.mangaId : mangaId // ignore: cast_nullable_to_non_nullable
-as String,lastChapter: null == lastChapter ? _self.lastChapter : lastChapter // ignore: cast_nullable_to_non_nullable
-as String,lastReadAt: null == lastReadAt ? _self.lastReadAt : lastReadAt // ignore: cast_nullable_to_non_nullable
+as String,lastReadChapter: null == lastReadChapter ? _self.lastReadChapter : lastReadChapter // ignore: cast_nullable_to_non_nullable
+as ChapterInfo,lastReadAt: null == lastReadAt ? _self.lastReadAt : lastReadAt // ignore: cast_nullable_to_non_nullable
 as DateTime,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
-
+/// Create a copy of ReadingProgress
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ChapterInfoCopyWith<$Res> get lastReadChapter {
+  
+  return $ChapterInfoCopyWith<$Res>(_self.lastReadChapter, (value) {
+    return _then(_self.copyWith(lastReadChapter: value));
+  });
+}
 }
 
 
@@ -458,10 +467,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String mangaId,  String lastChapter,  DateTime lastReadAt, @JsonKey(name: '_id')  String? id)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String mangaId,  ChapterInfo lastReadChapter,  DateTime lastReadAt, @JsonKey(name: '_id')  String? id)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReadingProgress() when $default != null:
-return $default(_that.mangaId,_that.lastChapter,_that.lastReadAt,_that.id);case _:
+return $default(_that.mangaId,_that.lastReadChapter,_that.lastReadAt,_that.id);case _:
   return orElse();
 
 }
@@ -479,10 +488,10 @@ return $default(_that.mangaId,_that.lastChapter,_that.lastReadAt,_that.id);case 
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String mangaId,  String lastChapter,  DateTime lastReadAt, @JsonKey(name: '_id')  String? id)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String mangaId,  ChapterInfo lastReadChapter,  DateTime lastReadAt, @JsonKey(name: '_id')  String? id)  $default,) {final _that = this;
 switch (_that) {
 case _ReadingProgress():
-return $default(_that.mangaId,_that.lastChapter,_that.lastReadAt,_that.id);case _:
+return $default(_that.mangaId,_that.lastReadChapter,_that.lastReadAt,_that.id);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -499,10 +508,10 @@ return $default(_that.mangaId,_that.lastChapter,_that.lastReadAt,_that.id);case 
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String mangaId,  String lastChapter,  DateTime lastReadAt, @JsonKey(name: '_id')  String? id)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String mangaId,  ChapterInfo lastReadChapter,  DateTime lastReadAt, @JsonKey(name: '_id')  String? id)?  $default,) {final _that = this;
 switch (_that) {
 case _ReadingProgress() when $default != null:
-return $default(_that.mangaId,_that.lastChapter,_that.lastReadAt,_that.id);case _:
+return $default(_that.mangaId,_that.lastReadChapter,_that.lastReadAt,_that.id);case _:
   return null;
 
 }
@@ -514,11 +523,11 @@ return $default(_that.mangaId,_that.lastChapter,_that.lastReadAt,_that.id);case 
 @JsonSerializable()
 
 class _ReadingProgress implements ReadingProgress {
-  const _ReadingProgress({required this.mangaId, required this.lastChapter, required this.lastReadAt, @JsonKey(name: '_id') this.id});
+  const _ReadingProgress({required this.mangaId, required this.lastReadChapter, required this.lastReadAt, @JsonKey(name: '_id') this.id});
   factory _ReadingProgress.fromJson(Map<String, dynamic> json) => _$ReadingProgressFromJson(json);
 
 @override final  String mangaId;
-@override final  String lastChapter;
+@override final  ChapterInfo lastReadChapter;
 @override final  DateTime lastReadAt;
 @override@JsonKey(name: '_id') final  String? id;
 
@@ -535,16 +544,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReadingProgress&&(identical(other.mangaId, mangaId) || other.mangaId == mangaId)&&(identical(other.lastChapter, lastChapter) || other.lastChapter == lastChapter)&&(identical(other.lastReadAt, lastReadAt) || other.lastReadAt == lastReadAt)&&(identical(other.id, id) || other.id == id));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReadingProgress&&(identical(other.mangaId, mangaId) || other.mangaId == mangaId)&&(identical(other.lastReadChapter, lastReadChapter) || other.lastReadChapter == lastReadChapter)&&(identical(other.lastReadAt, lastReadAt) || other.lastReadAt == lastReadAt)&&(identical(other.id, id) || other.id == id));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,mangaId,lastChapter,lastReadAt,id);
+int get hashCode => Object.hash(runtimeType,mangaId,lastReadChapter,lastReadAt,id);
 
 @override
 String toString() {
-  return 'ReadingProgress(mangaId: $mangaId, lastChapter: $lastChapter, lastReadAt: $lastReadAt, id: $id)';
+  return 'ReadingProgress(mangaId: $mangaId, lastReadChapter: $lastReadChapter, lastReadAt: $lastReadAt, id: $id)';
 }
 
 
@@ -555,11 +564,11 @@ abstract mixin class _$ReadingProgressCopyWith<$Res> implements $ReadingProgress
   factory _$ReadingProgressCopyWith(_ReadingProgress value, $Res Function(_ReadingProgress) _then) = __$ReadingProgressCopyWithImpl;
 @override @useResult
 $Res call({
- String mangaId, String lastChapter, DateTime lastReadAt,@JsonKey(name: '_id') String? id
+ String mangaId, ChapterInfo lastReadChapter, DateTime lastReadAt,@JsonKey(name: '_id') String? id
 });
 
 
-
+@override $ChapterInfoCopyWith<$Res> get lastReadChapter;
 
 }
 /// @nodoc
@@ -572,13 +581,294 @@ class __$ReadingProgressCopyWithImpl<$Res>
 
 /// Create a copy of ReadingProgress
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? mangaId = null,Object? lastChapter = null,Object? lastReadAt = null,Object? id = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? mangaId = null,Object? lastReadChapter = null,Object? lastReadAt = null,Object? id = freezed,}) {
   return _then(_ReadingProgress(
 mangaId: null == mangaId ? _self.mangaId : mangaId // ignore: cast_nullable_to_non_nullable
-as String,lastChapter: null == lastChapter ? _self.lastChapter : lastChapter // ignore: cast_nullable_to_non_nullable
-as String,lastReadAt: null == lastReadAt ? _self.lastReadAt : lastReadAt // ignore: cast_nullable_to_non_nullable
+as String,lastReadChapter: null == lastReadChapter ? _self.lastReadChapter : lastReadChapter // ignore: cast_nullable_to_non_nullable
+as ChapterInfo,lastReadAt: null == lastReadAt ? _self.lastReadAt : lastReadAt // ignore: cast_nullable_to_non_nullable
 as DateTime,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,
+  ));
+}
+
+/// Create a copy of ReadingProgress
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ChapterInfoCopyWith<$Res> get lastReadChapter {
+  
+  return $ChapterInfoCopyWith<$Res>(_self.lastReadChapter, (value) {
+    return _then(_self.copyWith(lastReadChapter: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$ChapterInfo {
+
+ String get id; String? get chapter; String? get title; String get translatedLanguage;
+/// Create a copy of ChapterInfo
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ChapterInfoCopyWith<ChapterInfo> get copyWith => _$ChapterInfoCopyWithImpl<ChapterInfo>(this as ChapterInfo, _$identity);
+
+  /// Serializes this ChapterInfo to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChapterInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.chapter, chapter) || other.chapter == chapter)&&(identical(other.title, title) || other.title == title)&&(identical(other.translatedLanguage, translatedLanguage) || other.translatedLanguage == translatedLanguage));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,chapter,title,translatedLanguage);
+
+@override
+String toString() {
+  return 'ChapterInfo(id: $id, chapter: $chapter, title: $title, translatedLanguage: $translatedLanguage)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ChapterInfoCopyWith<$Res>  {
+  factory $ChapterInfoCopyWith(ChapterInfo value, $Res Function(ChapterInfo) _then) = _$ChapterInfoCopyWithImpl;
+@useResult
+$Res call({
+ String id, String? chapter, String? title, String translatedLanguage
+});
+
+
+
+
+}
+/// @nodoc
+class _$ChapterInfoCopyWithImpl<$Res>
+    implements $ChapterInfoCopyWith<$Res> {
+  _$ChapterInfoCopyWithImpl(this._self, this._then);
+
+  final ChapterInfo _self;
+  final $Res Function(ChapterInfo) _then;
+
+/// Create a copy of ChapterInfo
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? chapter = freezed,Object? title = freezed,Object? translatedLanguage = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,chapter: freezed == chapter ? _self.chapter : chapter // ignore: cast_nullable_to_non_nullable
+as String?,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String?,translatedLanguage: null == translatedLanguage ? _self.translatedLanguage : translatedLanguage // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ChapterInfo].
+extension ChapterInfoPatterns on ChapterInfo {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ChapterInfo value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ChapterInfo() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ChapterInfo value)  $default,){
+final _that = this;
+switch (_that) {
+case _ChapterInfo():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ChapterInfo value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ChapterInfo() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? chapter,  String? title,  String translatedLanguage)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ChapterInfo() when $default != null:
+return $default(_that.id,_that.chapter,_that.title,_that.translatedLanguage);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? chapter,  String? title,  String translatedLanguage)  $default,) {final _that = this;
+switch (_that) {
+case _ChapterInfo():
+return $default(_that.id,_that.chapter,_that.title,_that.translatedLanguage);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? chapter,  String? title,  String translatedLanguage)?  $default,) {final _that = this;
+switch (_that) {
+case _ChapterInfo() when $default != null:
+return $default(_that.id,_that.chapter,_that.title,_that.translatedLanguage);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ChapterInfo implements ChapterInfo {
+  const _ChapterInfo({required this.id, this.chapter, this.title, required this.translatedLanguage});
+  factory _ChapterInfo.fromJson(Map<String, dynamic> json) => _$ChapterInfoFromJson(json);
+
+@override final  String id;
+@override final  String? chapter;
+@override final  String? title;
+@override final  String translatedLanguage;
+
+/// Create a copy of ChapterInfo
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ChapterInfoCopyWith<_ChapterInfo> get copyWith => __$ChapterInfoCopyWithImpl<_ChapterInfo>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ChapterInfoToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChapterInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.chapter, chapter) || other.chapter == chapter)&&(identical(other.title, title) || other.title == title)&&(identical(other.translatedLanguage, translatedLanguage) || other.translatedLanguage == translatedLanguage));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,chapter,title,translatedLanguage);
+
+@override
+String toString() {
+  return 'ChapterInfo(id: $id, chapter: $chapter, title: $title, translatedLanguage: $translatedLanguage)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ChapterInfoCopyWith<$Res> implements $ChapterInfoCopyWith<$Res> {
+  factory _$ChapterInfoCopyWith(_ChapterInfo value, $Res Function(_ChapterInfo) _then) = __$ChapterInfoCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String? chapter, String? title, String translatedLanguage
+});
+
+
+
+
+}
+/// @nodoc
+class __$ChapterInfoCopyWithImpl<$Res>
+    implements _$ChapterInfoCopyWith<$Res> {
+  __$ChapterInfoCopyWithImpl(this._self, this._then);
+
+  final _ChapterInfo _self;
+  final $Res Function(_ChapterInfo) _then;
+
+/// Create a copy of ChapterInfo
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? chapter = freezed,Object? title = freezed,Object? translatedLanguage = null,}) {
+  return _then(_ChapterInfo(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,chapter: freezed == chapter ? _self.chapter : chapter // ignore: cast_nullable_to_non_nullable
+as String?,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String?,translatedLanguage: null == translatedLanguage ? _self.translatedLanguage : translatedLanguage // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

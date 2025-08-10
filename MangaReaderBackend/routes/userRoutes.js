@@ -323,25 +323,30 @@ router.post('/unfollow', authenticateToken, async (req, res) => {
 
 router.post('/reading-progress', authenticateToken, async (req, res) => {
   try {
-    const { mangaId, lastChapter } = req.body;
+    const { mangaId, lastReadChapter } = req.body;
     const user = req.user;
 
-    if (!mangaId || !lastChapter) {
-      return res.status(400).json({ message: 'Thiếu thông tin cần thiết' });
+    if (!mangaId || !lastReadChapter || !lastReadChapter.id || !lastReadChapter.translatedLanguage) {
+      return res.status(400).json({ message: 'Thiếu thông tin cần thiết: mangaId và lastReadChapter (với id và translatedLanguage) là bắt buộc.' });
     }
 
-    const readingIndex = user.readingManga.findIndex(m => m.mangaId === mangaId);
+    // Xóa mục cũ nếu có
+    const updatedHistory = user.readingManga.filter(m => m.mangaId !== mangaId);
 
-    if (readingIndex > -1) {
-      user.readingManga[readingIndex].lastChapter = lastChapter;
-      user.readingManga[readingIndex].lastReadAt = new Date();
-    } else {
-      user.readingManga.push({
-        mangaId,
-        lastChapter: lastChapter,
-        lastReadAt: new Date()
-      });
-    }
+    // Thêm mục mới vào đầu danh sách
+    updatedHistory.unshift({
+      mangaId,
+      lastReadChapter: {
+        id: lastReadChapter.id,
+        chapter: lastReadChapter.chapter,
+        title: lastReadChapter.title,
+        translatedLanguage: lastReadChapter.translatedLanguage,
+      },
+      lastReadAt: new Date()
+    });
+
+    // Giới hạn lịch sử chỉ 10 truyện gần nhất
+    user.readingManga = updatedHistory.slice(0, 10);
 
     await user.save();
     res.json({ readingManga: user.readingManga });
@@ -378,15 +383,8 @@ router.get('/reading-history', authenticateToken, async (req, res) => {
   try {
     const user = req.user;
     
-    const sortedHistory = user.readingManga.sort((a, b) => b.lastReadAt - a.lastReadAt);
-
-    const historyResponse = sortedHistory.map(item => ({
-      mangaId: item.mangaId,
-      chapterId: item.lastChapter,
-      lastReadAt: item.lastReadAt,
-    }));
-
-    res.json(historyResponse);
+    // Lịch sử đã được sắp xếp khi lưu, chỉ cần trả về
+    res.json(user.readingManga);
   } catch (error) {
     console.error('Lỗi lấy lịch sử đọc:', error);
     res.status(500).json({ message: 'Lỗi máy chủ khi lấy lịch sử đọc' });
@@ -394,3 +392,5 @@ router.get('/reading-history', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
+

@@ -290,16 +290,16 @@ class UserApiService {
     }
   }
 
-  /// Cập nhật tiến độ đọc cho `mangaId` với `lastChapter` là chương cuối.
-  Future<void> updateReadingProgress(String mangaId, String lastChapter) async {
+  /// Cập nhật tiến độ đọc cho `mangaId` với thông tin chi tiết của chapter.
+  Future<void> updateReadingProgress(String mangaId, ChapterInfo lastReadChapter) async {
     final String token = await _getTokenOrThrow();
     try {
       final http.Response response = await client.post(
         Uri.parse('$baseUrl/api/users/reading-progress'),
         headers: _buildHeaders(token),
-        body: jsonEncode(<String, String>{
+        body: jsonEncode({
           'mangaId': mangaId,
-          'lastChapter': lastChapter,
+          'lastReadChapter': lastReadChapter.toJson(),
         }),
       );
       if (response.statusCode != 200) {
@@ -311,7 +311,7 @@ class UserApiService {
         );
       }
       logger.i(
-        'Đã cập nhật tiến độ đọc cho manga $mangaId, chapter $lastChapter',
+        'Đã cập nhật tiến độ đọc cho manga $mangaId, chapter ${lastReadChapter.id}',
       );
     } catch (e, s) {
       logger.e('Lỗi trong updateReadingProgress', error: e, stackTrace: s);
@@ -348,3 +348,5 @@ class UserApiService {
     client.close();
   }
 }
+
+

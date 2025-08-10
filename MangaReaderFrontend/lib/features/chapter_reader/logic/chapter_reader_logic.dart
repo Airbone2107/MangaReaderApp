@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/chapter_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../data/services/mangadex_api_service.dart';
 import '../../../data/services/user_api_service.dart';
 import '../../../data/storage/secure_storage_service.dart';
@@ -50,11 +51,22 @@ class ChapterReaderLogic {
     );
   }
 
+  /// Lấy thông tin chi tiết của một chapter từ danh sách chapter.
+  Map<String, dynamic> getChapterData(Chapter chapter, String chapterId) {
+    return chapter.chapterList.firstWhere(
+      (ch) => ch['id'] == chapterId,
+      orElse: () => <String, dynamic>{},
+    );
+  }
+
   /// Tạo tên hiển thị cho chapter dựa trên số và tiêu đề.
-  String getChapterDisplayName(Map<String, dynamic> chapter) {
-    final String chapterNumber =
-        chapter['attributes']['chapter'] as String? ?? 'N/A';
-    final String chapterTitle = chapter['attributes']['title'] as String? ?? '';
+  String getChapterDisplayName(Map<String, dynamic> chapterData) {
+    if (chapterData.isEmpty || chapterData['attributes'] == null) {
+      return 'Chapter không xác định';
+    }
+    final attributes = chapterData['attributes'] as Map<String, dynamic>;
+    final String chapterNumber = attributes['chapter'] as String? ?? 'N/A';
+    final String chapterTitle = attributes['title'] as String? ?? '';
     return chapterTitle.isEmpty || chapterTitle == chapterNumber
         ? 'Chương $chapterNumber'
         : 'Chương $chapterNumber: $chapterTitle';
@@ -193,11 +205,21 @@ class ChapterReaderLogic {
   }
 
   /// Cập nhật tiến độ đọc lên backend nếu có token.
-  Future<void> updateProgress(String mangaId, String chapterId) async {
+  Future<void> updateProgress(Chapter chapter) async {
     try {
       final String? token = await SecureStorageService.getToken();
       if (token != null) {
-        await userService.updateReadingProgress(mangaId, chapterId);
+        final chapterData = getChapterData(chapter, chapter.chapterId);
+        if (chapterData.isNotEmpty) {
+          final attributes = chapterData['attributes'] as Map<String, dynamic>;
+          final chapterInfo = ChapterInfo(
+            id: chapter.chapterId,
+            chapter: attributes['chapter'] as String?,
+            title: attributes['title'] as String?,
+            translatedLanguage: attributes['translatedLanguage'] as String,
+          );
+          await userService.updateReadingProgress(chapter.mangaId, chapterInfo);
+        }
       }
     } catch (e, s) {
       logger.w('Lỗi khi cập nhật tiến độ đọc', error: e, stackTrace: s);
@@ -209,3 +231,5 @@ class ChapterReaderLogic {
     scrollController.removeListener(_onScroll);
   }
 }
+
+

@@ -28,7 +28,7 @@ abstract class User with _$User {
 abstract class ReadingProgress with _$ReadingProgress {
   const factory ReadingProgress({
     required String mangaId,
-    required String lastChapter,
+    required ChapterInfo lastReadChapter,
     required DateTime lastReadAt,
     @JsonKey(name: '_id') String? id,
   }) = _ReadingProgress;
@@ -36,3 +36,19 @@ abstract class ReadingProgress with _$ReadingProgress {
   factory ReadingProgress.fromJson(Map<String, dynamic> json) =>
       _$ReadingProgressFromJson(json);
 }
+
+/// Thông tin chi tiết của một chapter được lưu trong lịch sử.
+@freezed
+abstract class ChapterInfo with _$ChapterInfo {
+  const factory ChapterInfo({
+    required String id,
+    String? chapter,
+    String? title,
+    required String translatedLanguage,
+  }) = _ChapterInfo;
+
+  factory ChapterInfo.fromJson(Map<String, dynamic> json) =>
+      _$ChapterInfoFromJson(json);
+}
+
+

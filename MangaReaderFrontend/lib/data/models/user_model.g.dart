@@ -39,7 +39,9 @@ Map<String, dynamic> _$UserToJson(_User instance) => <String, dynamic>{
 _ReadingProgress _$ReadingProgressFromJson(Map<String, dynamic> json) =>
     _ReadingProgress(
       mangaId: json['mangaId'] as String,
-      lastChapter: json['lastChapter'] as String,
+      lastReadChapter: ChapterInfo.fromJson(
+        json['lastReadChapter'] as Map<String, dynamic>,
+      ),
       lastReadAt: DateTime.parse(json['lastReadAt'] as String),
       id: json['_id'] as String?,
     );
@@ -47,7 +49,22 @@ _ReadingProgress _$ReadingProgressFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$ReadingProgressToJson(_ReadingProgress instance) =>
     <String, dynamic>{
       'mangaId': instance.mangaId,
-      'lastChapter': instance.lastChapter,
+      'lastReadChapter': instance.lastReadChapter.toJson(),
       'lastReadAt': instance.lastReadAt.toIso8601String(),
       '_id': instance.id,
+    };
+
+_ChapterInfo _$ChapterInfoFromJson(Map<String, dynamic> json) => _ChapterInfo(
+  id: json['id'] as String,
+  chapter: json['chapter'] as String?,
+  title: json['title'] as String?,
+  translatedLanguage: json['translatedLanguage'] as String,
+);
+
+Map<String, dynamic> _$ChapterInfoToJson(_ChapterInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'chapter': instance.chapter,
+      'title': instance.title,
+      'translatedLanguage': instance.translatedLanguage,
     };

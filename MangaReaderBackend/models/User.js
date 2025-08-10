@@ -2,6 +2,13 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
+const chapterInfoSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  chapter: { type: String, default: null },
+  title: { type: String, default: null },
+  translatedLanguage: { type: String, required: true },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   authProvider: {
     type: String,
@@ -47,8 +54,8 @@ const userSchema = new mongoose.Schema({
       type: String,
       required: true
     },
-    lastChapter: {
-      type: String,
+    lastReadChapter: {
+      type: chapterInfoSchema,
       required: true
     },
     lastReadAt: {
@@ -127,3 +134,5 @@ userSchema.methods.removeToken = async function(token) {
 };
 
 module.exports = mongoose.model('User', userSchema);
+
+
