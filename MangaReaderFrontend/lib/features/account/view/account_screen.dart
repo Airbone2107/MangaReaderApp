@@ -38,7 +38,41 @@ class _AccountScreenState extends State<AccountScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tài khoản của bạn')),
+      appBar: AppBar(
+        title: const Text('Tài khoản của bạn'),
+        actions: _logic.user != null
+            ? <Widget>[
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Đăng xuất',
+                  onPressed: () async {
+                    final bool? confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (BuildContext dialogContext) {
+                        return AlertDialog(
+                          title: const Text('Đăng xuất'),
+                          content: const Text('Bạn có chắc muốn đăng xuất?'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(false),
+                              child: const Text('Hủy'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(true),
+                              child: const Text('Đăng xuất'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (confirm == true) {
+                      await _logic.handleSignOut();
+                    }
+                  },
+                ),
+              ]
+            : null,
+      ),
       body: _buildBody(),
     );
   }
