@@ -39,6 +39,7 @@ class MangaDexApiService {
   }) async {
     final Map<String, dynamic> params = <String, dynamic>{
       'hasAvailableChapters': '1',
+      'hasUnavailableChapters': '0',
     };
 
     final List<String> finalIncludes = <String>{'cover_art', ...?includes}.toList();
@@ -155,12 +156,12 @@ class MangaDexApiService {
     }
   }
 
-  /// Lấy danh sách các chapter của một manga theo ngôn ngữ, thứ tự, và giới hạn tối đa.
+  /// Lấy danh sách các chapter của một manga theo ngôn ngữ, thứ tự, và giới hạn.
   Future<List<dynamic>> fetchChapters(
     String mangaId,
     List<String> languages, {
     String order = 'desc',
-    int? maxChapters,
+    int? limit,
   }) async {
     final List<String> validLanguages = List<String>.from(languages);
     validLanguages.removeWhere(
@@ -172,14 +173,38 @@ class MangaDexApiService {
         'Danh sách ngôn ngữ không hợp lệ. Vui lòng kiểm tra cài đặt.',
       );
     }
+    
+    // Nếu có limit, chỉ cần gọi API một lần với limit đó.
+    if (limit != null) {
+      final queryParameters = <String, dynamic>{
+        'limit': limit.toString(),
+        'offset': '0',
+        'order[chapter]': order,
+        'translatedLanguage[]': validLanguages,
+      };
+      final uri = Uri.parse('$baseUrl/manga/$mangaId/feed')
+          .replace(queryParameters: queryParameters);
+      final response = await _client.get(uri);
 
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return data['data'] as List<dynamic>;
+      } else {
+         logError('fetchChapters (limited)', response);
+        throw Exception(
+          'Lỗi khi tải ${limit} chapter: ${response.statusCode}',
+        );
+      }
+    }
+    
+    // Logic cũ để tải tất cả chapter (phân trang)
     final List<dynamic> allChapters = <dynamic>[];
     int offset = 0;
-    const int limit = 100;
+    const int pageSize = 100;
 
     while (true) {
       final Map<String, dynamic> queryParameters = <String, dynamic>{
-        'limit': limit.toString(),
+        'limit': pageSize.toString(),
         'offset': offset.toString(),
         'order[chapter]': order,
         'translatedLanguage[]': validLanguages,
@@ -195,24 +220,19 @@ class MangaDexApiService {
         final List<dynamic> chapters = data['data'] as List<dynamic>;
 
         if (chapters.isEmpty) {
-          break;
+          break; // Không còn chapter nào nữa
         }
 
         allChapters.addAll(chapters);
-
-        if (maxChapters != null && allChapters.length >= maxChapters) {
-          return allChapters.take(maxChapters).toList();
-        }
-
-        offset += limit;
+        offset += pageSize;
       } else if (response.statusCode == 503) {
         throw Exception(
           'Máy chủ MangaDex hiện đang bảo trì, xin vui lòng thử lại sau!',
         );
       } else {
-        logError('fetchChapters', response);
+        logError('fetchChapters (paginated)', response);
         throw Exception(
-          'Lỗi trong hàm fetchChapters:\nMã trạng thái: ${response.statusCode}\nNội dung phản hồi: ${response.body}',
+          'Lỗi trong hàm fetchChapters:\nMã trạng thái: ${response.statusCode}',
         );
       }
     }
@@ -273,6 +293,7 @@ class MangaDexApiService {
       'ids[]': mangaIds,
       'includes[]': 'cover_art',
       'hasAvailableChapters': '1',
+      'hasUnavailableChapters': '0',
     };
     final Uri url = Uri.parse(
       '$baseUrl/manga',

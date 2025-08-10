@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:manga_reader_app/features/auth/view/login_screen.dart';
 import 'package:manga_reader_app/features/auth/view/register_screen.dart';
-import '../../../data/models/user_model.dart';
 import '../logic/account_logic.dart';
 
 /// Màn hình quản lý tài khoản người dùng.
@@ -12,12 +11,14 @@ class AccountScreen extends StatefulWidget {
   State<AccountScreen> createState() => _AccountScreenState();
 }
 
-class _AccountScreenState extends State<AccountScreen> {
+class _AccountScreenState extends State<AccountScreen> with SingleTickerProviderStateMixin {
   final AccountScreenLogic _logic = AccountScreenLogic();
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _logic.init(context, () {
         if (mounted) {
@@ -29,6 +30,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _logic.dispose();
     super.dispose();
   }
@@ -134,56 +136,76 @@ class _AccountScreenState extends State<AccountScreen> {
 
   /// Nội dung khi người dùng đã đăng nhập.
   Widget _buildUserContent() {
-    return Column(
-      children: <Widget>[
-        UserAccountsDrawerHeader(
-          accountName: Text(_logic.user!.displayName),
-          accountEmail: Text(_logic.user!.email),
-          currentAccountPicture:
-              _logic.user!.photoURL != null && _logic.user!.photoURL!.isNotEmpty
-              ? CircleAvatar(
-                  backgroundImage: NetworkImage(_logic.user!.photoURL!),
-                )
-              : CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  child: Text(
-                    _logic.user!.displayName.isNotEmpty
-                        ? _logic.user!.displayName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(color: Colors.white, fontSize: 24),
-                  ),
-                ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(8.0),
-            children: <Widget>[
-              if (_logic.user != null)
-                _logic.buildMangaListView(
-                  'Truyện Theo Dõi',
-                  _logic.user!.following,
-                  isFollowing: true,
-                ),
-              const SizedBox(height: 16),
-              if (_logic.user != null)
-              _logic.buildMangaListView(
-                'Lịch Sử Đọc Truyện',
-                _logic.user!.readingProgress
-                    .map((ReadingProgress p) => p.mangaId)
-                    .toList(),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  onPressed: _logic.handleSignOut,
-                  child: const Text('Đăng xuất'),
-                ),
-              ),
-            ],
+    return NestedScrollView(
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          SliverToBoxAdapter(
+            child: UserAccountsDrawerHeader(
+              accountName: Text(_logic.user!.displayName),
+              accountEmail: Text(_logic.user!.email),
+              currentAccountPicture:
+                  _logic.user!.photoURL != null && _logic.user!.photoURL!.isNotEmpty
+                  ? CircleAvatar(
+                      backgroundImage: NetworkImage(_logic.user!.photoURL!),
+                    )
+                  : CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      child: Text(
+                        _logic.user!.displayName.isNotEmpty
+                            ? _logic.user!.displayName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(color: Colors.white, fontSize: 24),
+                      ),
+                    ),
+              margin: EdgeInsets.zero,
+            ),
           ),
-        ),
-      ],
+          SliverPersistentHeader(
+            delegate: _SliverTabBarDelegate(
+              TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Theo dõi'),
+                  Tab(text: 'Lịch sử'),
+                ],
+              ),
+            ),
+            pinned: true,
+          ),
+        ];
+      },
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _logic.buildFollowingTab(),
+          _logic.buildHistoryTab(),
+        ],
+      ),
     );
+  }
+
+}
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverTabBarDelegate(this.tabBar);
+
+  final TabBar tabBar;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+    return tabBar != oldDelegate.tabBar;
   }
 }

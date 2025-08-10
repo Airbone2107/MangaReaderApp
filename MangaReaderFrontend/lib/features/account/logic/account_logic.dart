@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:manga_reader_app/core/services/language_service.dart';
 import 'package:manga_reader_app/data/models/manga/manga.dart';
 import 'package:manga_reader_app/data/models/manga/relationship.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../../../config/google_signin_config.dart';
 import '../../../data/models/chapter_model.dart';
 import '../../../data/models/user_model.dart';
@@ -37,6 +40,8 @@ class AccountScreenLogic {
   Future<void> init(BuildContext context, VoidCallback refreshUI) async {
     this.context = context;
     this.refreshUI = refreshUI;
+    // Cài đặt ngôn ngữ Tiếng Việt cho timeago
+    timeago.setLocaleMessages('vi', timeago.ViMessages());
     await _loadUser();
   }
 
@@ -149,112 +154,82 @@ class AccountScreenLogic {
   /// Lấy thông tin các manga dựa trên danh sách `mangaIds` và cache kết quả.
   Future<List<Manga>> _getMangaListInfo(List<String> mangaIds) async {
     try {
-      final List<Manga> mangas = await _mangaDexService.fetchMangaByIds(
-        mangaIds,
-      );
-      for (final Manga manga in mangas) {
-        _mangaCache[manga.id] = manga;
+      final List<String> idsToFetch = mangaIds.where((id) => !_mangaCache.containsKey(id)).toList();
+      if (idsToFetch.isNotEmpty) {
+        final List<Manga> mangas = await _mangaDexService.fetchMangaByIds(idsToFetch);
+        for (final Manga manga in mangas) {
+          _mangaCache[manga.id] = manga;
+        }
       }
-      return mangas;
+      return mangaIds.map((id) => _mangaCache[id]).whereType<Manga>().toList();
     } catch (e, s) {
       logger.w(
         'Lỗi khi lấy thông tin danh sách manga',
         error: e,
         stackTrace: s,
       );
-      return <Manga>[];
+      return [];
     }
   }
 
-  /// Xây dựng danh sách manga theo tiêu đề và id.
-  Widget buildMangaListView(
-    String title,
-    List<String> mangaIds, {
-    bool isFollowing = false,
-  }) {
-    if (mangaIds.isEmpty) {
-      return Card(
-        margin: const EdgeInsets.all(8),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text('Không có truyện nào.'),
-            ],
-          ),
-        ),
-      );
+  /// Widget xây dựng nội dung cho tab "Truyện theo dõi"
+  Widget buildFollowingTab() {
+    final followingIds = user?.following ?? [];
+    if (followingIds.isEmpty) {
+      return const Center(child: Text('Bạn chưa theo dõi truyện nào.'));
     }
-
     return FutureBuilder<List<Manga>>(
-      future: _getMangaListInfo(mangaIds),
-      builder: (BuildContext context, AsyncSnapshot<List<Manga>> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && _mangaCache.keys.where((k) => mangaIds.contains(k)).isEmpty) {
-          return Card(
-            child: ListTile(
-              title: Text(title),
-              subtitle: const Center(child: CircularProgressIndicator()),
-            ),
-          );
+      future: _getMangaListInfo(followingIds),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Card(
-            child: ListTile(
-              title: Text(title),
-              subtitle: Text('Lỗi: ${snapshot.error}'),
-            ),
-          );
+          return Center(child: Text('Lỗi tải truyện: ${snapshot.error}'));
         }
-        
-        final List<Manga> mangasFromIds = mangaIds
-            .map((id) => _mangaCache[id])
-            .whereType<Manga>()
-            .toList();
-        return Card(
-          margin: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: mangasFromIds.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final Manga manga = mangasFromIds[index];
-                  ChapterInfo? lastReadChapterInfo;
-                  if (!isFollowing && user != null) {
-                    try {
-                      final ReadingProgress progress = user!.readingProgress.firstWhere(
-                          (p) => p.mangaId == manga.id);
-                      lastReadChapterInfo = progress.lastReadChapter;
-                    } catch (e) {
-                      lastReadChapterInfo = null;
-                    }
-                  }
-                  return _buildMangaListItem(
-                    manga,
-                    isFollowing: isFollowing,
-                    lastReadChapterInfo: lastReadChapterInfo,
-                  );
-                },
-              ),
-            ],
-          ),
+        final mangas = snapshot.data ?? [];
+        return ListView.builder(
+          padding: const EdgeInsets.all(8.0),
+          itemCount: mangas.length,
+          itemBuilder: (context, index) {
+            return _buildMangaListItem(mangas[index], isFollowing: true);
+          },
+        );
+      },
+    );
+  }
+
+  /// Widget xây dựng nội dung cho tab "Lịch sử đọc"
+  Widget buildHistoryTab() {
+    final readingHistory = user?.readingProgress ?? [];
+    if (readingHistory.isEmpty) {
+      return const Center(child: Text('Lịch sử đọc của bạn trống.'));
+    }
+    final historyIds = readingHistory.map((p) => p.mangaId).toList();
+    
+    return FutureBuilder<List<Manga>>(
+      future: _getMangaListInfo(historyIds),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Lỗi tải lịch sử: ${snapshot.error}'));
+        }
+        final mangasMap = {for (var m in snapshot.data ?? []) m.id: m};
+        return ListView.builder(
+          padding: const EdgeInsets.all(8.0),
+          itemCount: readingHistory.length,
+          itemBuilder: (context, index) {
+            final progress = readingHistory[index];
+            final manga = mangasMap[progress.mangaId];
+            if (manga == null) return const SizedBox.shrink();
+            return _buildMangaListItem(
+              manga,
+              isFollowing: false,
+              readingProgress: progress,
+            );
+          },
         );
       },
     );
@@ -264,12 +239,13 @@ class AccountScreenLogic {
   Widget _buildMangaListItem(
     Manga manga, {
     required bool isFollowing,
-    ChapterInfo? lastReadChapterInfo,
+    ReadingProgress? readingProgress,
   }) {
     final String title = manga.getDisplayTitle();
-    return Container(
+    final itemContent = Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(12.0),
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8.0),
@@ -316,108 +292,170 @@ class AccountScreenLogic {
                 ),
                 const SizedBox(height: 8),
                 isFollowing
-                  ? _buildLatestChapterInfo(manga.id)
-                  : _buildLastReadChapterInfo(manga.id, lastReadChapterInfo),
+                    ? _buildLatestChaptersInfo(manga.id)
+                    : _buildLastReadInfo(manga, readingProgress),
               ],
             ),
           ),
-          if (isFollowing)
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-              onPressed: () => handleUnfollow(manga.id),
-            ),
         ],
       ),
     );
+
+    if (!isFollowing) return itemContent;
+
+    return Slidable(
+      key: ValueKey('following-${manga.id}'),
+      endActionPane: ActionPane(
+        motion: const ScrollMotion(),
+        extentRatio: 0.32,
+        children: [
+          SlidableAction(
+            onPressed: (_) => handleUnfollow(manga.id),
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            icon: Icons.delete_outline,
+            label: 'Bỏ theo dõi',
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(8.0),
+              bottomRight: Radius.circular(8.0),
+            ),
+          ),
+        ],
+      ),
+      child: itemContent,
+    );
   }
- 
-  Widget _buildLatestChapterInfo(String mangaId) {
+
+  Widget _buildLatestChaptersInfo(String mangaId) {
     return FutureBuilder<List<dynamic>>(
       future: _mangaDexService.fetchChapters(
         mangaId,
         LanguageService.instance.preferredLanguages,
-        maxChapters: 1,
+        limit: 3,
       ),
       builder: (BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
             height: 50,
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           );
         }
-        if (snapshot.hasError || snapshot.data!.isEmpty) {
-          return const Text('Không thể tải chapter');
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Text('Không thể tải chapter mới.');
         }
-        final dynamic chapterData = snapshot.data!.first;
-        final attributes = chapterData['attributes'] as Map<String, dynamic>;
-        final String chapterNumber = attributes['chapter'] as String? ?? 'N/A';
-        final String chapterTitle = attributes['title'] as String? ?? '';
-        final String displayTitle = chapterTitle.isEmpty
-            ? 'Chương $chapterNumber'
-            : 'Chương $chapterNumber: $chapterTitle';
-            
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-            displayTitle,
-            style: const TextStyle(fontSize: 13),
-            overflow: TextOverflow.ellipsis,
-          ),
-          onTap: () async {
-            // Cần tải lại toàn bộ danh sách chapter khi nhấn vào
-            final fullChapterList = await _mangaDexService.fetchChapters(
-                mangaId, LanguageService.instance.preferredLanguages);
-            if (context.mounted) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (BuildContext context) => ChapterReaderScreen(
-                    chapter: Chapter(
-                      mangaId: mangaId,
-                      chapterId: chapterData['id'] as String,
-                      chapterName: displayTitle,
-                      chapterList: fullChapterList,
-                    ),
-                  ),
-                ),
-              );
+
+        final chapters = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: chapters.map((chapterData) {
+            final attributes = chapterData['attributes'] as Map<String, dynamic>;
+            final String chapterNumber = attributes['chapter'] as String? ?? 'N/A';
+            final String chapterTitle = attributes['title'] as String? ?? '';
+            final String langCode = attributes['translatedLanguage'] as String? ?? '??';
+            final String? flagAsset = LanguageService.instance.getFlagAssetByLanguageCode(langCode);
+
+            final String displayTitle = chapterTitle.isEmpty || chapterTitle == chapterNumber
+                ? 'Chương $chapterNumber'
+                : 'Chương $chapterNumber: $chapterTitle';
+
+            String? timeText;
+            try {
+              final String? ts = (attributes['publishAt'] ?? attributes['createdAt'] ?? attributes['readableAt']) as String?;
+              if (ts != null) {
+                final dt = DateTime.tryParse(ts);
+                if (dt != null) {
+                  timeText = timeago.format(dt.toLocal(), locale: 'vi');
+                }
+              }
+            } catch (_) {
+              timeText = null;
             }
-          },
+
+            return InkWell(
+              onTap: () async {
+                final fullChapterList = await _mangaDexService.fetchChapters(
+                    mangaId, LanguageService.instance.preferredLanguages);
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (BuildContext context) => ChapterReaderScreen(
+                        chapter: Chapter(
+                          mangaId: mangaId,
+                          chapterId: chapterData['id'] as String,
+                          chapterName: displayTitle,
+                          chapterList: fullChapterList,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  children: [
+                    if (flagAsset != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6.0),
+                        child: SvgPicture.asset(flagAsset, width: 20, height: 15, fit: BoxFit.cover),
+                      )
+                    else
+                      const SizedBox(width: 26),
+                    Expanded(
+                      child: Text(
+                        displayTitle,
+                        style: const TextStyle(fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (timeText != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        timeText!,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         );
       },
     );
   }
-
-  Widget _buildLastReadChapterInfo(String mangaId, ChapterInfo? chapterInfo) {
-    if (chapterInfo == null) {
+  
+  Widget _buildLastReadInfo(Manga manga, ReadingProgress? progress) {
+    if (progress == null) {
       return const Text('Chưa đọc chapter nào', style: TextStyle(fontSize: 13));
     }
-
+    
+    final ChapterInfo chapterInfo = progress.lastReadChapter;
     final chapterNumber = chapterInfo.chapter ?? 'N/A';
     final chapterTitle = chapterInfo.title ?? '';
-    final displayTitle = chapterTitle.isEmpty || chapterTitle == chapterNumber
-        ? 'Đang đọc: Chương $chapterNumber'
-        : 'Đang đọc: Chương $chapterNumber: $chapterTitle';
-        
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-        displayTitle,
-        style: const TextStyle(fontSize: 13),
-        overflow: TextOverflow.ellipsis,
-      ),
+    final chapterLine = chapterTitle.isEmpty || chapterTitle == chapterNumber
+        ? 'Chương $chapterNumber'
+        : 'Chương $chapterNumber: $chapterTitle';
+    final timeAgo = timeago.format(progress.lastReadAt, locale: 'vi');
+
+    return InkWell(
       onTap: () async {
         final fullChapterList = await _mangaDexService.fetchChapters(
-            mangaId, LanguageService.instance.preferredLanguages);
+            manga.id, LanguageService.instance.preferredLanguages);
         if (context.mounted) {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => ChapterReaderScreen(
                 chapter: Chapter(
-                  mangaId: mangaId,
+                  mangaId: manga.id,
                   chapterId: chapterInfo.id,
-                  chapterName: displayTitle.replaceFirst('Đang đọc: ', ''),
+                  chapterName: chapterLine,
                   chapterList: fullChapterList,
                 ),
               ),
@@ -425,9 +463,26 @@ class AccountScreenLogic {
           );
         }
       },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Đang đọc'),
+          const SizedBox(height: 2),
+          Text(
+            chapterLine,
+            style: const TextStyle(fontSize: 13),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            timeAgo,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          )
+        ],
+      ),
     );
   }
-
 
   /// Dựng widget ảnh bìa cho manga.
   Widget _buildCoverImage(Manga manga) {
