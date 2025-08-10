@@ -10,7 +10,7 @@ import 'package:manga_reader_app/features/search/view/manga_search_screen.dart';
 import '../../../utils/manga_helper.dart';
 
 class TabContentView extends ConsumerWidget {
-  final SortManga sortManga;
+  final MangaSearchQuery sortManga;
   final bool isActive;
   const TabContentView({super.key, required this.sortManga, required this.isActive});
 
@@ -112,7 +112,7 @@ class TabContentView extends ConsumerWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => AdvancedSearchScreen(
-                        initialSortManga: sortManga,
+                        initialFilters: sortManga,
                       ),
                     ),
                   );

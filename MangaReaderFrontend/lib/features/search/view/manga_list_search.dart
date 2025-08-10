@@ -1,11 +1,11 @@
-import '../../../data/models/sort_manga_model.dart';
+import 'package:manga_reader_app/data/models/sort_manga_model.dart';
 import 'package:flutter/material.dart';
 import '../../../shared_widgets/manga_grid_view.dart';
 import '../../../shared_widgets/scaffold_with_animated_app_bar.dart';
 
 /// Màn hình hiển thị kết quả tìm kiếm theo tiêu chí đã chọn.
 class MangaListSearch extends StatefulWidget {
-  final SortManga sortManga;
+  final MangaSearchQuery sortManga;
 
   const MangaListSearch({super.key, required this.sortManga});
 

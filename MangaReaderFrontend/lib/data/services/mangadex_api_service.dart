@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:manga_reader_app/data/models/author.dart';
 import 'package:manga_reader_app/data/models/manga/manga_statistics.dart';
 import '../../utils/logger.dart';
 import '../models/manga/list_response.dart';
@@ -33,12 +34,11 @@ class MangaDexApiService {
   Future<List<Manga>> fetchManga({
     int? limit,
     int? offset,
-    SortManga? sortManga,
+    MangaSearchQuery? sortManga,
     List<String>? includes,
   }) async {
     final Map<String, dynamic> params = <String, dynamic>{
       'hasAvailableChapters': '1',
-      'hasUnavailableChapters': '0',
     };
 
     final List<String> finalIncludes = <String>{'cover_art', ...?includes}.toList();
@@ -107,6 +107,32 @@ class MangaDexApiService {
     } else {
       logError('fetchMangaDetails', response);
       throw Exception('Lỗi khi tải chi tiết manga');
+    }
+  }
+
+    /// Tìm kiếm tác giả/họa sĩ theo tên.
+  Future<List<Author>> searchAuthors(String name) async {
+    if (name.isEmpty) return [];
+
+    final Map<String, dynamic> params = <String, dynamic>{
+      'name': name,
+      'limit': '10',
+    };
+    final Uri uri = Uri.parse('$baseUrl/author').replace(queryParameters: params);
+    final http.Response response = await _client.get(uri);
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      final listResponse = ListResponse<Author>.fromJson(
+        data,
+        (json) => Author.fromJson(json as Map<String, dynamic>),
+      );
+      return listResponse.data;
+    } else {
+      logError('searchAuthors', response);
+      // Trả về mảng rỗng thay vì ném lỗi để không làm gián đoạn UI
+      return [];
     }
   }
 
@@ -247,7 +273,6 @@ class MangaDexApiService {
       'ids[]': mangaIds,
       'includes[]': 'cover_art',
       'hasAvailableChapters': '1',
-      'hasUnavailableChapters': '0',
     };
     final Uri url = Uri.parse(
       '$baseUrl/manga',

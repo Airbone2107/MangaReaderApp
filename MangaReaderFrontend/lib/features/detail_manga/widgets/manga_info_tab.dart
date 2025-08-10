@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:manga_reader_app/data/models/manga/manga.dart';
 import 'package:manga_reader_app/data/models/manga/manga_statistics.dart';
 import 'package:manga_reader_app/data/models/manga/tag.dart';
+import 'package:manga_reader_app/core/services/language_service.dart';
 import 'package:manga_reader_app/utils/manga_helper.dart';
 
 class MangaInfoTab extends StatelessWidget {
@@ -59,6 +60,14 @@ class MangaInfoTab extends StatelessWidget {
         .join(', ');
         
     final numberFormatter = NumberFormat.decimalPattern('vi_VN');
+    final String originalLanguageName = LanguageService.instance
+        .getLanguageNameByCode(manga.attributes.originalLanguage);
+
+    String statusDisplay = _capitalizeFirst(manga.attributes.status);
+    String demographicDisplay =
+        _capitalizeFirst(manga.attributes.publicationDemographic);
+    String contentRatingDisplay =
+        _capitalizeFirst(manga.attributes.contentRating);
 
     return GridView.count(
       crossAxisCount: 2,
@@ -72,15 +81,21 @@ class MangaInfoTab extends StatelessWidget {
         _buildInfoItem(context, 'Tác giả', authors.isEmpty ? 'N/A' : authors),
         _buildInfoItem(context, 'Họa sĩ', artists.isEmpty ? 'N/A' : artists),
         _buildInfoItem(context, 'Năm phát hành', manga.attributes.year?.toString() ?? 'N/A'),
-        _buildInfoItem(context, 'Trạng thái', manga.attributes.status ?? 'N/A'),
+        _buildInfoItem(context, 'Trạng thái', statusDisplay),
         _buildInfoItem(context, 'Điểm TB', stats.rating.average?.toStringAsFixed(2) ?? 'N/A'),
         _buildInfoItem(context, 'Điểm Bayesian', stats.rating.bayesian.toStringAsFixed(2)),
         _buildInfoItem(context, 'Lượt theo dõi', numberFormatter.format(stats.follows)),
-        _buildInfoItem(context, 'Đối tượng', manga.attributes.publicationDemographic ?? 'N/A'),
-        _buildInfoItem(context, 'Ngôn ngữ gốc', manga.attributes.originalLanguage),
-        _buildInfoItem(context, 'Đánh giá', manga.attributes.contentRating ?? 'N/A'),
+        _buildInfoItem(context, 'Đối tượng', demographicDisplay),
+        _buildInfoItem(context, 'Ngôn ngữ gốc', originalLanguageName),
+        _buildInfoItem(context, 'Đánh giá', contentRatingDisplay),
       ],
     );
+  }
+
+  String _capitalizeFirst(String? input) {
+    if (input == null || input.isEmpty) return 'N/A';
+    final lower = input.toLowerCase();
+    return lower[0].toUpperCase() + lower.substring(1);
   }
 
   Widget _buildInfoItem(BuildContext context, String label, String value) {

@@ -11,7 +11,7 @@ import '../utils/manga_helper.dart';
 
 /// Lưới hoặc danh sách hiển thị manga với lazy-loading.
 class MangaGridView extends StatefulWidget {
-  final SortManga? sortManga;
+  final MangaSearchQuery? sortManga;
   final ScrollController controller;
   final bool isGridView;
 
@@ -31,6 +31,7 @@ class _MangaGridViewState extends State<MangaGridView> {
   List<Manga> mangas = <Manga>[];
   int offset = 0;
   bool isLoading = false;
+  bool _hasMore = true;
 
   @override
   void initState() {
@@ -56,7 +57,7 @@ class _MangaGridViewState extends State<MangaGridView> {
 
   /// Tải danh sách manga theo trang, tránh trùng nếu đã có.
   Future<void> _loadMangas() async {
-    if (isLoading) {
+    if (isLoading || !_hasMore) {
       return;
     }
     if (mounted) {
@@ -71,6 +72,9 @@ class _MangaGridViewState extends State<MangaGridView> {
       );
       if (mounted) {
         setState(() {
+          if (newMangas.length < 21) {
+            _hasMore = false;
+          }
           for (final Manga manga in newMangas) {
             if (!mangas.any(
                   (Manga existingManga) => existingManga.id == manga.id,
@@ -78,7 +82,7 @@ class _MangaGridViewState extends State<MangaGridView> {
               mangas.add(manga);
             }
           }
-          offset += 21;
+          offset += newMangas.length;
         });
       }
     } catch (e, s) {
@@ -153,6 +157,9 @@ class _MangaGridViewState extends State<MangaGridView> {
   Widget build(BuildContext context) {
     if (mangas.isEmpty && isLoading) {
       return const Center(child: CircularProgressIndicator());
+    }
+     if (mangas.isEmpty && !isLoading) {
+      return const Center(child: Text("Không tìm thấy kết quả phù hợp."));
     }
     return widget.isGridView ? _buildGridView() : _buildListView();
   }

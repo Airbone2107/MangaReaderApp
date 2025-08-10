@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:manga_reader_app/data/models/chapter_model.dart';
 import 'package:manga_reader_app/data/models/manga/manga.dart';
+import 'package:manga_reader_app/core/services/language_service.dart';
 import 'package:manga_reader_app/data/models/manga/relationship.dart';
 import 'package:manga_reader_app/features/chapter_reader/view/chapter_reader_screen.dart';
 import 'package:manga_reader_app/utils/manga_helper.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ChaptersTab extends StatelessWidget {
   final Manga manga;
@@ -114,10 +116,22 @@ class ChaptersTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           children: chaptersByLanguage.entries.map((langEntry) {
-            final language = langEntry.key;
+            final languageCode = langEntry.key;
             final languageChapters = langEntry.value;
+            final String languageName =
+                LanguageService.instance.getLanguageNameByCode(languageCode);
+            final String? flagAsset = LanguageService.instance
+                .getFlagAssetByLanguageCode(languageCode);
             return ExpansionTile(
-              title: Text('Ngôn ngữ: ${language.toUpperCase()}'),
+              leading: flagAsset != null
+                  ? SvgPicture.asset(
+                      flagAsset,
+                      width: 24,
+                      height: 18,
+                      fit: BoxFit.cover,
+                    )
+                  : const SizedBox(width: 24, height: 18),
+              title: Text(languageName),
               initiallyExpanded: true,
               children: languageChapters.map<Widget>((chapter) {
                 final attributes = chapter['attributes'] as Map<String, dynamic>;

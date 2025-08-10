@@ -1,3 +1,4 @@
+import 'package:manga_reader_app/core/services/language_service.dart';
 import 'package:manga_reader_app/data/models/manga/manga.dart';
 
 extension MangaHelper on Manga {
@@ -5,7 +6,8 @@ extension MangaHelper on Manga {
   ///
   /// Ưu tiên tìm trong `title`, sau đó đến `altTitles` theo danh sách ngôn ngữ.
   /// Nếu không có, sẽ lấy tiêu đề có sẵn đầu tiên.
-  String getDisplayTitle({List<String> preferredLanguages = const ['vi', 'en']}) {
+  String getDisplayTitle() {
+    final preferredLanguages = LanguageService.instance.preferredLanguages;
     // 1. Tìm trong trường `title` chính
     for (final String lang in preferredLanguages) {
       if (attributes.title.containsKey(lang) && attributes.title[lang]!.isNotEmpty) {
@@ -50,7 +52,8 @@ extension MangaHelper on Manga {
   }
 
   /// Lấy mô tả hiển thị một cách an toàn.
-  String getDisplayDescription({List<String> preferredLanguages = const ['vi', 'en']}) {
+  String getDisplayDescription() {
+    final preferredLanguages = LanguageService.instance.preferredLanguages;
     for (final String lang in preferredLanguages) {
       if (attributes.description.containsKey(lang) && attributes.description[lang]!.isNotEmpty) {
         return attributes.description[lang]!;

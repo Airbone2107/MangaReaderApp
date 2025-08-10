@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:manga_reader_app/config/language_config.dart';
+import 'package:manga_reader_app/core/services/language_service.dart';
 import 'package:manga_reader_app/data/models/manga/manga_statistics.dart';
 import '../../../data/models/manga/manga.dart';
 import '../../../data/services/mangadex_api_service.dart';
@@ -29,7 +29,7 @@ class MangaDetailLogic {
     pageData = _fetchPageData();
     chapters = _mangaDexService.fetchChapters(
       mangaId,
-      LanguageConfig.preferredLanguages,
+      LanguageService.instance.preferredLanguages,
     );
     checkFollowingStatus();
   }

@@ -16,7 +16,7 @@ final topDailyFollowedMangaProvider = FutureProvider<List<Manga>>((ref) async {
   return api.fetchManga(
     limit: 10,
     includes: <String>['tag'],
-    sortManga: SortManga(
+    sortManga: MangaSearchQuery(
       order: <String, SortOrder>{'followedCount': SortOrder.desc},
       updatedAtSince: formattedDate,
     ),
@@ -32,7 +32,7 @@ final topWeeklyMangaProvider = FutureProvider<List<Manga>>((ref) async {
   return api.fetchManga(
     limit: 10,
     includes: <String>['tag'],
-    sortManga: SortManga(
+    sortManga: MangaSearchQuery(
       order: <String, SortOrder>{'followedCount': SortOrder.desc},
       updatedAtSince: formattedDate,
     ),
@@ -49,7 +49,7 @@ final topMonthlyMangaProvider = FutureProvider<List<Manga>>((ref) async {
   return api.fetchManga(
     limit: 10,
     includes: <String>['tag'],
-    sortManga: SortManga(
+    sortManga: MangaSearchQuery(
       order: <String, SortOrder>{'followedCount': SortOrder.desc},
       updatedAtSince: formattedDate,
     ),
@@ -62,7 +62,7 @@ final recentlyUpdatedMangaProvider = FutureProvider<List<Manga>>((ref) async {
   return api.fetchManga(
     limit: 10,
     includes: <String>['tag'],
-    sortManga: SortManga(
+    sortManga: MangaSearchQuery(
       order: <String, SortOrder>{'latestUploadedChapter': SortOrder.desc},
     ),
   );
@@ -70,7 +70,7 @@ final recentlyUpdatedMangaProvider = FutureProvider<List<Manga>>((ref) async {
 
 // Provider cho nội dung các tab
 final tabContentProvider =
-    FutureProvider.family<List<Manga>, SortManga>((ref, sortManga) async {
+    FutureProvider.family<List<Manga>, MangaSearchQuery>((ref, sortManga) async {
   final api = ref.watch(mangaDexApiServiceProvider);
   return api.fetchManga(
     limit: 21,

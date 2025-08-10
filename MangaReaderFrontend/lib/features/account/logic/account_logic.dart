@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:manga_reader_app/config/language_config.dart';
+import 'package:manga_reader_app/core/services/language_service.dart';
 import 'package:manga_reader_app/data/models/manga/manga.dart';
 import 'package:manga_reader_app/data/models/manga/relationship.dart';
 import '../../../config/google_signin_config.dart';
@@ -320,10 +320,10 @@ class AccountScreenLogic {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 8),
-                FutureBuilder<List<dynamic>>(
+                 FutureBuilder<List<dynamic>>(
                   future: _mangaDexService.fetchChapters(
                     mangaId,
-                    LanguageConfig.preferredLanguages,
+                     LanguageService.instance.preferredLanguages,
                   ),
                   builder:
                       (

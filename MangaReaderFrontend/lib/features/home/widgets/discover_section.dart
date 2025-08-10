@@ -16,12 +16,12 @@ class DiscoverSection extends HookWidget {
     final searchKey = useMemoized(() => GlobalKey(), const []);
     final carouselKey = useMemoized(() => GlobalKey(), const []);
 
-    final tabs = <String, SortManga>{
-      'Theo Dõi': SortManga(order: <String, SortOrder>{'followedCount': SortOrder.desc}),
-      'Manga': SortManga(originalLanguage: <String>['ja'], order: <String, SortOrder>{'rating': SortOrder.desc}),
-      'Manhwa': SortManga(originalLanguage: <String>['ko'], order: <String, SortOrder>{'rating': SortOrder.desc}),
-      'Manhua': SortManga(originalLanguage: <String>['zh'], order: <String, SortOrder>{'rating': SortOrder.desc}),
-      'Hoàn Thành': SortManga(status: <String>['completed'], order: <String, SortOrder>{'rating': SortOrder.desc}),
+    final tabs = <String, MangaSearchQuery>{
+      'Theo Dõi': MangaSearchQuery(order: <String, SortOrder>{'followedCount': SortOrder.desc}),
+      'Manga': MangaSearchQuery(originalLanguage: <String>['ja'], order: <String, SortOrder>{'rating': SortOrder.desc}),
+      'Manhwa': MangaSearchQuery(originalLanguage: <String>['ko'], order: <String, SortOrder>{'rating': SortOrder.desc}),
+      'Manhua': MangaSearchQuery(originalLanguage: <String>['zh'], order: <String, SortOrder>{'rating': SortOrder.desc}),
+      'Hoàn Thành': MangaSearchQuery(status: <String>['completed'], order: <String, SortOrder>{'rating': SortOrder.desc}),
     };
 
     double _heightOf(GlobalKey key) {
@@ -64,7 +64,7 @@ class DiscoverSection extends HookWidget {
         context,
         MaterialPageRoute(
           builder: (BuildContext context) => MangaListSearch(
-            sortManga: SortManga(title: query),
+            sortManga: MangaSearchQuery(title: query),
           ),
         ),
       );
